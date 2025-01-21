@@ -18,13 +18,29 @@ class Task:
     def __init__(self, id, resources, position, time_window, threat):
         self.id = id
         self.required_resources: np.ndarray = np.array(resources)  # 资源需求向量
+        # 已满足资源向量
+        # self.satisfied_resources: np.ndarray = np.zeros_like(resources)
+        self.resources_nums: int = len(resources)  # 资源数量
         self.position: np.ndarray = np.array(position)  # 位置信息 (x, y, z)
         self.time_window = time_window  # 时间窗口 [min_start, max_start]
         self.threat = threat  # 威胁指数
-        # 资源权重向量，默认全部为1
-        self.resources_weights: np.ndarray = np.ones_like(
-            self.required_resources
-        ) / len(self.required_resources)
+        # # 资源权重向量，默认全部为1
+        # self.resources_weights: np.ndarray = (
+        #     np.ones(self.resources_nums) / self.resources_nums
+        # )
+
+    def get_resources_weights(self, task_obtained_resources=0):
+        still_required_resources = self.required_resources - task_obtained_resources
+        still_required_resources_pos = np.maximum(
+            still_required_resources, 0
+        )  # 将负值置为0
+        if np.sum(still_required_resources_pos) == 0:
+            return np.zeros_like(still_required_resources_pos)
+        else:
+            resources_weights = still_required_resources_pos / np.sum(
+                still_required_resources_pos
+            )
+            return resources_weights
 
     def __repr__(self):
         return f"Task(id={self.id}, resources={self.required_resources}, position={self.position}, time_window={self.time_window}, threat_index={self.threat})"

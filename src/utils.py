@@ -13,6 +13,49 @@ from task import TaskManager
 from coalition import CoalitionSet
 
 
+def calculate_uav_task_benefit(
+    uav: UAV,
+    task: Task,
+    coalition: List[UAV], # UAVs in the coalition, without the current UAV
+    map_shape,
+    alpha=1.0,
+    beta=1.0,
+    gamma=1.0,
+    debug=False,
+) -> float:
+    """
+    r(ui, tj) = alpha * val(ui, tj) + beta * cost(ui, tj) - gamma * risk(ui, tj)
+    """
+    # 计算资源贡献
+    Kj = task.resources_weights
+    satisfied = np.zeros(resources_num)
+    for uav_in_coalition in coalition:
+        satisfied += uav_in_coalition.resources
+    
+    I = uav.resources  # only consider uav's own resources
+    # +is required, -is surplus
+    pre_required_resources = task.required_resources - satisfied
+    # +is required, -is surplus
+    now_required_resources = np.maximum(pre_required_resources, 0) - uav.resources
+    # +is surplus, -is required
+    now_not_required_resources = -now_required_resources
+
+    O = sum(np.maximum(now_not_required_resources, 0))
+    P = 0.5
+    val = calculate_resource_contribution
+
+    # 计算路径成本
+    cost = calculate_path_cost(uav, task, map_shape, val)
+
+    # 计算威胁代价
+    risk = calculate_threat_cost(uav, task)
+
+    # 总收益
+    total_benefit = alpha * val + beta * cost - gamma * risk
+
+    return total_benefit
+
+
 def calculate_resource_contribution(
     Kj: np.ndarray,
     I: np.ndarray,

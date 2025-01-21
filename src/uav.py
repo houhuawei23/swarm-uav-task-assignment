@@ -21,8 +21,12 @@ class UAV:
         self.value: float = value  # 无人机价值
         self.max_speed: float = max_speed  # 最大速度
 
+    # def __repr__(self):
+    #     return f"UAV(id={self.id}, resources={self.resources}, position={self.position}, value={self.value}, max_speed={self.max_speed})"
+    # def __str__(self):
+    #     return f"u{self.id}"
     def __repr__(self):
-        return f"UAV(id={self.id}, resources={self.resources}, position={self.position}, value={self.value}, max_speed={self.max_speed})"
+        return f"u{self.id}"
 
     def __str__(self):
         return f"u{self.id}, re={self.resources}, pos={self.position}, val={self.value}, ms={self.max_speed}"

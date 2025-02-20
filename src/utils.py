@@ -16,7 +16,7 @@ from coalition import CoalitionSet
 def calculate_uav_task_benefit(
     uav: UAV,
     task: Task,
-    coalition: List[UAV], # UAVs in the coalition, without the current UAV
+    coalition: List[UAV],  # UAVs in the coalition, without the current UAV
     map_shape,
     alpha=1.0,
     beta=1.0,
@@ -27,11 +27,12 @@ def calculate_uav_task_benefit(
     r(ui, tj) = alpha * val(ui, tj) + beta * cost(ui, tj) - gamma * risk(ui, tj)
     """
     # 计算资源贡献
-    Kj = task.resources_weights
+    resources_num = 2
+    # Kj = task.resources_weights
     satisfied = np.zeros(resources_num)
     for uav_in_coalition in coalition:
         satisfied += uav_in_coalition.resources
-    
+
     I = uav.resources  # only consider uav's own resources
     # +is required, -is surplus
     pre_required_resources = task.required_resources - satisfied
@@ -116,3 +117,32 @@ def calculate_threat_cost(uav: UAV, task: Task):
     """
     # 威胁代价计算
     return uav.value * task.threat
+
+
+import json
+import subprocess
+
+
+def format_json(json_file_path):
+    try:
+        # 调用 Prettier 命令行工具
+        subprocess.run(["prettier", "--write", json_file_path], check=True)
+        print(f"'{json_file_path}' has been formatted with Prettier.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error formatting JSON file with Prettier: {e}")
+    except FileNotFoundError:
+        print("Prettier is not installed or not found in your system PATH.")
+
+
+def save_uavs_and_tasks(
+    uav_manager: UAVManager, task_manager: TaskManager, output_file_path
+):
+    # 将 UAVManager 和 TaskManager 的信息存储为 JSON 文件
+    data = {
+        "uavs": uav_manager.to_dict(),
+        "tasks": task_manager.to_dict(),
+    }
+
+    with open(output_file_path, "w") as f:
+        json.dump(data, f)
+    format_json(output_file_path)

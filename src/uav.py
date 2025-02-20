@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List
 
 
 class UAV:
@@ -14,7 +15,14 @@ class UAV:
         max_speed (float): The maximum speed at which the UAV can travel.
     """
 
-    def __init__(self, id, resources, position, value, max_speed):
+    def __init__(
+        self,
+        id: int,
+        resources: List[float] | np.ndarray,
+        position: List[float] | np.ndarray,
+        value: float,
+        max_speed: float,
+    ):
         self.id: int = id
         self.resources: np.ndarray = np.array(resources)  # 资源向量
         self.position: np.ndarray = np.array(position)  # 位置信息 (x, y, z)
@@ -26,10 +34,32 @@ class UAV:
     # def __str__(self):
     #     return f"u{self.id}"
     def __repr__(self):
-        return f"u{self.id}"
+        return f"UAV{self.id}(re={self.resources}, pos={self.position}, val={self.value}, ms={self.max_speed})"
+        # return f"u{self.id}"
 
     def __str__(self):
         return f"u{self.id}, re={self.resources}, pos={self.position}, val={self.value}, ms={self.max_speed}"
+
+    # def format_print(self):
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "resources": self.resources.tolist(),
+            "position": self.position.tolist(),
+            "value": self.value,
+            "max_speed": self.max_speed,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            id=data["id"],
+            resources=data["resources"],
+            position=data["position"],
+            value=data["value"],
+            max_speed=data["max_speed"],
+        )
 
 
 from typing import List, Optional, Dict
@@ -44,10 +74,6 @@ class UAVManager:
     def __init__(self, uavs: List[UAV] = None):
         """Initialize the UAVManager with an optional list of UAVs."""
         self.uavs: Dict[int, UAV] = {uav.id: uav for uav in uavs}
-        # self.uavs = {}
-        # if uavs:
-        #     for uav in uavs:
-        #         self.uavs[uav.id] = uav
 
     def add_uav(self, uav: UAV):
         """Add a UAV to the manager."""
@@ -63,7 +89,10 @@ class UAVManager:
 
     def get_uav_by_id(self, uav_id: int) -> Optional[UAV]:
         """Retrieve a UAV by its ID."""
-        return self.uavs.get(uav_id)
+        uav = self.uavs.get(uav_id)
+        if uav == None:
+            assert False
+        return uav
 
     def get_all_uavs(self) -> List[UAV]:
         """Get a list of all managed UAVs."""
@@ -85,6 +114,23 @@ class UAVManager:
 
     def nums(self):
         return len(self.uavs)
+
+    def to_dict(self):
+        return [uav.to_dict() for uav in self.uavs.values()]
+
+    @classmethod
+    def from_dict(cls, data):
+        """
+        data: Dict
+        """
+        uavs = [UAV.from_dict(uav_data) for uav_data in data]
+        return cls(uavs)
+
+    def format_print(self):
+        print(f"UAVManager managing {len(self.uavs)} UAVs")
+        for uav in self.uavs.values():
+            # uav.format_print()
+            print(f"  {uav}")
 
     def __contains__(self, uav_id: int) -> bool:
         """Check if a UAV with the given ID exists in the manager."""

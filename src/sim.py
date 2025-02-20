@@ -1,44 +1,86 @@
 from uav import UAV, UAVManager
 from task import Task, TaskManager
 from game import CoalitionFormationGame
+from coalition import CoalitionSet
+import json
+import subprocess
+from task_assign import EnumerationAlgorithm
+from utils import save_uavs_and_tasks
 
 
-# 示例使用
-if __name__ == "__main__":
+def test_coalition(test_case_path="../tests/case1.json"):
     resources_num = 2
     map_shape = (20, 20, 0)
     gamma = 0.1
 
-    # 初始化无人机
-    uav1 = UAV(1, [5, 3], [0, 0, 0], 10, 20)
-    uav2 = UAV(2, [3, 4], [10, 10, 0], 15, 25)
-    uav3 = UAV(3, [2, 5], [20, 20, 0], 20, 30)
-    uavs = [uav1, uav2, uav3]
-    uav_manager = UAVManager(uavs)
-    # 初始化任务
-    task1 = Task(1, [4, 2], [5, 5, 0], [0, 100], 0.5)
-    task2 = Task(2, [3, 3], [15, 15, 0], [0, 100], 0.7)
-    tasks = [task1, task2]
-    task_manager = TaskManager(tasks)
+    # 加载 无人机 任务
+    with open(test_case_path, "r") as f:
+        data = json.load(f)
+
+    uav_manager = UAVManager.from_dict(data["uavs"])
+    task_manager = TaskManager.from_dict(data["tasks"])
+
+    uav_manager.format_print()
+    task_manager.format_print()
+
+    # 将字典转换为 JSON 并保存到文件
+    # save_uavs_and_tasks(uav_manager, task_manager, test_data_path)
+    print("---")
+    print("Coalition Game")
+    coalition_set = CoalitionSet(uav_manager, task_manager)
     game = CoalitionFormationGame(
+        uav_manager,
+        task_manager,
+        coalition_set,
+        resources_num=resources_num,
+        map_shape=map_shape,
+        gamma=gamma,
+    )
+
+    # coalition_set.plot_map()
+    game.run(debug=False)
+    print(f"Coalition Game Result: {coalition_set}")
+    coalition_set.plot_map("coalition_game_result.png")
+
+    print("---")
+    print("Enumeration")
+    enumeration_algorithm = EnumerationAlgorithm(
         uav_manager,
         task_manager,
         resources_num=resources_num,
         map_shape=map_shape,
         gamma=gamma,
     )
+    best_assignment, best_score = enumeration_algorithm.solve()
 
-    val = game.cal_resource_contribution(uav1, task1)
-    cost = game.cal_path_cost(uav1, task1, val)
-    threat = game.cal_threat_cost(uav1, task1)
-    benefit = game.cal_uav_task_benefit(uav1, task1)
-    print(f"{uav1}")
-    print(f"{task1}")
-    print(f"Resource contribution: {val: .2f}")
-    print(f"Path cost: {cost: .2f}")
-    print(f"Threat cost: {threat: .2f}")
-    print(f"Benefit: {benefit: .2f}")
+    print(f"Best Assignment: {best_assignment}")
+    print(f"Best Score: {best_score}")
 
-    game.plot_map()
-    final_coalitions = game.run(debug=False)
-    game.plot_map()
+    enu_coalition_set = CoalitionSet(
+        uav_manager, task_manager, assignment=best_assignment
+    )
+    enu_coalition_set.plot_map("enumeration_result.png")
+
+
+import argparse
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Coalition Formation Game Simulation")
+    # test_case
+    parser.add_argument(
+        "--test_case",
+        type=str,
+        default="../tests/case1.json",
+        help="path to the test case file",
+    )
+    # parse args
+    args = parser.parse_args()
+    test_case_path = args.test_case
+    print(f"Using test case: {test_case_path}")
+    test_coalition(test_case_path)
+
+
+# 示例使用
+if __name__ == "__main__":
+    main()

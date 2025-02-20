@@ -52,6 +52,7 @@ class CoalitionFormationGame:
         self,
         uav_manager: UAVManager,
         task_manager: TaskManager,
+        coalition_set: CoalitionSet,
         resources_num: int,
         map_shape,
         alpha=1.0,
@@ -66,7 +67,7 @@ class CoalitionFormationGame:
         self.alpha: float = alpha  # 资源贡献权重
         self.beta: float = beta  # 路径成本权重
         self.gamma: float = gamma  # 威胁权重
-        self.coalition_set = CoalitionSet(uav_manager, task_manager)
+        self.coalition_set = coalition_set  #
 
     def cal_sum_utility(self, debug=False) -> float:
         """Calculates the total utility of the current coalition assignments.
@@ -74,18 +75,21 @@ class CoalitionFormationGame:
         """
         total_utility = 0.0
         for task in self.task_manager:
-            total_utility += self.cal_task_coalition_utility(task, debug=debug)
+            total_utility += self.cal_task_coalition_utility(task, [], debug=debug)
         if debug:
             print(f"Total Utility: {total_utility:.2f}")
         return total_utility
 
     def cal_task_coalition_utility(
-        self, task: Task, coalition: List[UAV], debug=False
+        self, task: Task, coalition: List[int], debug=False
     ) -> float:
         if debug:
             print(f"cal_task_coalition_utility(task=t{task.id}, coalition={coalition})")
         utility = 0.0
-        for uav in coalition:  # ??? coalition=[u1, u2] on t2, 效用不应该简单叠加吧！！
+        for (
+            uav_id
+        ) in coalition:  # ??? coalition=[u1, u2] on t2, 效用不应该简单叠加吧！！
+            uav = self.uav_manager.get_uav_by_id(uav_id)
             utility += self.cal_uav_task_benefit(uav, task, debug=debug)
         if debug:
             print(f"  utility={utility:.2f}")
@@ -108,7 +112,7 @@ class CoalitionFormationGame:
             coalition=coalition,
             debug=debug,
         )
-        coalition.remove(uav)
+        coalition.remove(uav.id)
         R_ctj_minus_ui = self.cal_task_coalition_utility(
             assigned_task,
             coalition=coalition,
@@ -132,7 +136,7 @@ class CoalitionFormationGame:
             print(f"cal_uav_utility_on_other_task(uav=u{uav.id}, task=t{task.id})")
         coalition_of_task = self.coalition_set.get_coalition(task.id).copy()
         R_origin = self.cal_task_coalition_utility(task, coalition_of_task, debug=debug)
-        coalition_of_task.append(uav)
+        coalition_of_task.append(uav.id)
         R_union = self.cal_task_coalition_utility(task, coalition_of_task, debug=debug)
 
         utility = R_union - R_origin
@@ -196,7 +200,7 @@ class CoalitionFormationGame:
         if debug:
             print(f"cal_uav_task_benefit(uav=u{uav.id}, task=t{task.id})")
         # 计算资源贡献
-        resource_contribution = self.cal_resource_contribution(uav, task)
+        resource_contribution = self.cal_resource_contribution(uav, task, debug)
         # 计算路径成本
         path_cost = self.cal_path_cost(uav, task, resource_contribution)
         # 计算威胁代价
@@ -231,7 +235,7 @@ class CoalitionFormationGame:
         abtained_resources = self.coalition_set.task_obtained_resources[task.id].copy()
 
         # 如果 uav 在 task 的联盟中，则减去 uav 的贡献
-        if uav in self.coalition_set.coalitions[task.id]:
+        if uav.id in self.coalition_set.get_coalition(task.id):
             abtained_resources -= uav.resources
 
         now_required_resources = task.required_resources - abtained_resources
@@ -308,10 +312,11 @@ class CoalitionFormationGame:
         stable = True
         # 遍历所有任务的所有已分配的无人机
         for task in self.task_manager:
-            print(
-                f"Checking stability for task {task.id}, coalition: {self.coalition_set[task.id]}"
-            )
-            for uav in self.coalition_set[task.id]:
+            # print(
+            #     f"Checking stability for task {task.id}, coalition: {self.coalition_set[task.id]}"
+            # )
+            for uav_id in self.coalition_set[task.id]:
+                uav = self.uav_manager.get_uav_by_id(uav_id)
                 cur_utility = self.cal_uav_utility(uav, debug=False)
                 if debug:
                     print(f"Cur utility: u{uav.id}-t{task.id}={cur_utility}")
@@ -319,7 +324,7 @@ class CoalitionFormationGame:
                 for other_task in self.task_manager:
                     if other_task.id != task.id:
                         utility = self.cal_uav_utility_on_other_task(
-                            uav, other_task, debug=False
+                            uav, other_task, debug=debug
                         )
                         if debug:
                             print(f"utility: u{uav.id}-t{other_task.id}={utility}")
@@ -354,6 +359,8 @@ class CoalitionFormationGame:
         iter_cnt = 0
         while True:
             # in once iter, try to assign one uav to each task
+            print(f"Iteration {iter_cnt} begin.")
+            print(f"Cur coalition set: {self.coalition_set}")
             if iter_cnt >= max_iterations:
                 print("Max iterations reached, may have dead loop")
                 break
@@ -363,96 +370,10 @@ class CoalitionFormationGame:
             # 3. matching based on maximum weighed principle
             self.match_tasks(benefit_matrix, debug=debug)
             if self.check_stability(debug=debug):
+                print(f"check_stability True, Iteration {iter_cnt} end.")
                 break
 
         return self.coalition_set
-
-    def plot_map(self):
-        """Visualizes the UAVs and tasks on a 2D map, with circles indicating UAV coalitions."""
-        plt.figure(figsize=(16, 12))
-        # plt.figure()
-        text_delta = 0.2  # 文本偏移量
-        # Plot tasks
-        for task in self.task_manager:
-            plt.scatter(
-                task.position[0],
-                task.position[1],
-                color="red",
-                label=f"Task {task.id}",
-                s=200,
-                marker="s",
-            )
-            plt.text(
-                task.position[0],
-                task.position[1] + text_delta,
-                f"{task}",
-                fontsize=12,
-                ha="center",
-            )
-
-        # Plot UAVs and their coalitions
-        for task_id, coalition in self.coalition_set.coalitions.items():
-            if task_id is not None:
-                # Draw a circle around UAVs in the same coalition
-                if len(coalition) > 1:
-                    x_coords = [uav.position[0] for uav in coalition]
-                    y_coords = [uav.position[1] for uav in coalition]
-                    center_x = np.mean(x_coords)
-                    center_y = np.mean(y_coords)
-                    radius = (
-                        max(np.max(x_coords) - center_x, np.max(y_coords) - center_y)
-                        + 5
-                    )
-                    circle = plt.Circle(
-                        (center_x, center_y),
-                        radius,
-                        color="blue",
-                        fill=False,
-                        linestyle="--",
-                    )
-                    plt.gca().add_patch(circle)
-
-                # Plot UAVs
-                for uav in coalition:
-                    plt.scatter(
-                        uav.position[0],
-                        uav.position[1],
-                        color="blue",
-                        label=f"UAV {uav.id}",
-                        s=100,
-                    )
-                    plt.text(
-                        uav.position[0],
-                        uav.position[1] + text_delta,
-                        f"{uav}",
-                        fontsize=10,
-                        ha="center",
-                    )
-
-        # Plot unassigned UAVs
-        for uav in self.coalition_set.get_unassigned_uavs():
-            plt.scatter(
-                uav.position[0],
-                uav.position[1],
-                color="gray",
-                label=f"UAV {uav.id} (Unassigned)",
-                s=100,
-            )
-            plt.text(
-                uav.position[0],
-                uav.position[1] + text_delta,
-                f"{uav}",
-                fontsize=10,
-                ha="center",
-            )
-
-        plt.xlabel("X Coordinate")
-        plt.ylabel("Y Coordinate")
-        plt.title("UAVs and Tasks on Map")
-        plt.grid(True)
-        # plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-        plt.legend()
-        plt.show()
 
 
 def test_calculate_resource_contribution():
@@ -477,7 +398,8 @@ def test_game():
 
     uav1 = UAV(id=1, resources=[5, 3], position=[0, 0, 0], value=1, max_speed=10)
     uav2 = UAV(id=2, resources=[3, 4], position=[10, 10, 0], value=1, max_speed=10)
-    uavs = [uav1, uav2]
+    uav3 = UAV(id=3, resources=[2, 5], position=[20, 20, 0], value=1, max_speed=10)
+    uavs = [uav1, uav2, uav3]
     uav_manager = UAVManager(uavs)
     task1 = Task(1, [4, 2], [5, 5, 0], [0, 100], 0.5)
     task2 = Task(2, [3, 3], [15, 15, 0], [0, 100], 0.5)
@@ -485,9 +407,11 @@ def test_game():
     # tasks = [task1]
     task_manager = TaskManager(tasks)
 
+    coalition_set = CoalitionSet(uav_manager, task_manager)
     game = CoalitionFormationGame(
         uav_manager,
         task_manager,
+        coalition_set,
         resources_num=resources_num,
         map_shape=map_shape,
         gamma=gamma,
@@ -504,29 +428,9 @@ def test_game():
     print(f"Threat cost: {threat: .2f}")
     print(f"Benefit: {benefit: .2f}")
 
-    game.plot_map()
-    final_coalitions = game.run(debug=True)
-    game.plot_map()
-
-
-def test_game2():
-    # 初始化无人机
-    uav1 = UAV(1, [5, 3], [0, 0, 0], 10, 20)
-    uav2 = UAV(2, [3, 4], [10, 10, 0], 15, 25)
-    uav3 = UAV(3, [2, 5], [20, 20, 0], 20, 30)
-    uavs = [uav1, uav2, uav3]
-
-    # 初始化任务
-    task1 = Task(1, [4, 2], [5, 5, 0], [0, 100], 0.5)
-    task2 = Task(2, [3, 3], [15, 15, 0], [0, 100], 0.7)
-    tasks = [task1, task2]
-
-    # 运行联盟形成博弈算法
-    game = CoalitionFormationGame(uavs, tasks)
-
-    game.plot_map()
-    final_coalitions = game.run(debug=True)
-    game.plot_map()
+    coalition_set.plot_map()
+    game.run(debug=True)
+    coalition_set.plot_map()
 
 
 if __name__ == "__main__":

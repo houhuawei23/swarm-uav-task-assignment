@@ -1,0 +1,63 @@
+{
+    "uavs": [
+      {
+        "id": 1,
+        "resources": [3, 4],
+        "position": [23, 45, 0],
+        "value": 12,
+        "max_speed": 15
+      },
+      {
+        "id": 2,
+        "resources": [5, 2],
+        "position": [67, 89, 0],
+        "value": 20,
+        "max_speed": 22
+      },
+      {
+        "id": 3,
+        "resources": [4, 3],
+        "position": [12, 34, 0],
+        "value": 18,
+        "max_speed": 18
+      },
+      {
+        "id": 4,
+        "resources": [2, 5],
+        "position": [56, 78, 0],
+        "value": 25,
+        "max_speed": 28
+      },
+      {
+        "id": 5,
+        "resources": [3, 4],
+        "position": [89, 23, 0],
+        "value": 15,
+        "max_speed": 20
+      }
+    ],
+    "tasks": [
+      {
+        "id": 1,
+        "required_resources": [7, 6],
+        "position": [30, 40, 0],
+        "time_window": [0, 100],
+        "threat": 0.6
+      },
+      {
+        "id": 2,
+        "required_resources": [6, 7],
+        "position": [60, 70, 0],
+        "time_window": [0, 100],
+        "threat": 0.4
+      },
+      {
+        "id": 3,
+        "required_resources": [5, 5],
+        "position": [90, 10, 0],
+        "time_window": [0, 100],
+        "threat": 0.8
+      }
+    ]
+  }
+  

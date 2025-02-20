@@ -15,19 +15,21 @@ class Task:
         threat (float): A threat index representing the danger or risk associated with the task.
     """
 
-    def __init__(self, id, resources, position, time_window, threat):
+    def __init__(
+        self,
+        id: int,
+        required_resources: List[float] | np.ndarray,
+        position: List[float] | np.ndarray,
+        time_window: List[float],
+        threat: float,
+    ):
         self.id = id
-        self.required_resources: np.ndarray = np.array(resources)  # 资源需求向量
-        # 已满足资源向量
-        # self.satisfied_resources: np.ndarray = np.zeros_like(resources)
-        self.resources_nums: int = len(resources)  # 资源数量
+        # 资源需求向量
+        self.required_resources: np.ndarray = np.array(required_resources)
+        self.resources_nums: int = len(required_resources)  # 资源数量
         self.position: np.ndarray = np.array(position)  # 位置信息 (x, y, z)
         self.time_window = time_window  # 时间窗口 [min_start, max_start]
         self.threat = threat  # 威胁指数
-        # # 资源权重向量，默认全部为1
-        # self.resources_weights: np.ndarray = (
-        #     np.ones(self.resources_nums) / self.resources_nums
-        # )
 
     def get_resources_weights(self, task_obtained_resources=0):
         still_required_resources = self.required_resources - task_obtained_resources
@@ -48,6 +50,25 @@ class Task:
     def __str__(self):
         return f"T{self.id}: re={self.required_resources}, pos={self.position}, tw={self.time_window}, thr={self.threat}"
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "required_resources": self.required_resources.tolist(),
+            "position": self.position.tolist(),
+            "time_window": self.time_window,
+            "threat": self.threat,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            id=data["id"],
+            required_resources=data["required_resources"],
+            position=data["position"],
+            time_window=data["time_window"],
+            threat=data["threat"],
+        )
+
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -62,9 +83,6 @@ class TaskManager:
     def __init__(self, tasks: List[Task] = None):
         """Initialize the TaskManager with a list of tasks."""
         self.tasks: Dict[int, Task] = {task.id: task for task in tasks}
-        # if tasks:
-        #     for task in tasks:
-        #         self.tasks[task.id] = task
 
     def add_task(self, task: Task):
         """Add a task to the TaskManager."""
@@ -104,6 +122,17 @@ class TaskManager:
     def nums(self):
         return len(self.tasks)
 
+    def to_dict(self):
+        return [task.to_dict() for task in self.tasks.values()]
+
+    @classmethod
+    def from_dict(cls, data):
+        tasks = [Task.from_dict(task_data) for task_data in data]
+        return cls(tasks)
+    def format_print(self):
+        print(f"TaskManager with {len(self.tasks)} tasks.")
+        for task in self.tasks.values():
+            print(f"  {task}")
     def __iter__(self):
         """Iterate over all tasks."""
         return iter(self.tasks.values())
@@ -274,14 +303,14 @@ if __name__ == "__main__":
     # Create some tasks
     task1 = Task(
         id=1,
-        resources=[5, 2, 3],
+        required_resources=[5, 2, 3],
         position=[10, 20, 0],
         time_window=[0, 100],
         threat=0.5,
     )
     task2 = Task(
         id=2,
-        resources=[4, 5, 6],
+        required_resources=[4, 5, 6],
         position=[40, 50, 0],
         time_window=[50, 150],
         threat=0.7,
@@ -293,7 +322,7 @@ if __name__ == "__main__":
     # Add a new task
     task3 = Task(
         id=3,
-        resources=[7, 8, 9],
+        required_resources=[7, 8, 9],
         position=[70, 80, 0],
         time_window=[100, 200],
         threat=0.9,

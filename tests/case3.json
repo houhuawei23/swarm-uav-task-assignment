@@ -1,0 +1,111 @@
+{
+  "uavs": [
+    {
+      "id": 1,
+      "resources": [3, 4],
+      "position": [12, 25, 0],
+      "value": 15,
+      "max_speed": 22
+    },
+    {
+      "id": 2,
+      "resources": [2, 5],
+      "position": [30, 10, 0],
+      "value": 18,
+      "max_speed": 28
+    },
+    {
+      "id": 3,
+      "resources": [4, 3],
+      "position": [5, 40, 0],
+      "value": 12,
+      "max_speed": 25
+    },
+    {
+      "id": 4,
+      "resources": [5, 2],
+      "position": [20, 15, 0],
+      "value": 20,
+      "max_speed": 30
+    },
+    {
+      "id": 5,
+      "resources": [1, 4],
+      "position": [35, 5, 0],
+      "value": 10,
+      "max_speed": 20
+    },
+    {
+      "id": 6,
+      "resources": [3, 3],
+      "position": [10, 30, 0],
+      "value": 14,
+      "max_speed": 24
+    },
+    {
+      "id": 7,
+      "resources": [2, 2],
+      "position": [25, 20, 0],
+      "value": 16,
+      "max_speed": 26
+    },
+    {
+      "id": 8,
+      "resources": [4, 4],
+      "position": [40, 35, 0],
+      "value": 19,
+      "max_speed": 29
+    },
+    {
+      "id": 9,
+      "resources": [3, 5],
+      "position": [15, 45, 0],
+      "value": 17,
+      "max_speed": 27
+    },
+    {
+      "id": 10,
+      "resources": [5, 1],
+      "position": [50, 10, 0],
+      "value": 13,
+      "max_speed": 23
+    }
+  ],
+  "tasks": [
+    {
+      "id": 1,
+      "required_resources": [6, 5],
+      "position": [18, 22, 0],
+      "time_window": [0, 100],
+      "threat": 0.3
+    },
+    {
+      "id": 2,
+      "required_resources": [4, 3],
+      "position": [28, 12, 0],
+      "time_window": [0, 100],
+      "threat": 0.6
+    },
+    {
+      "id": 3,
+      "required_resources": [5, 4],
+      "position": [10, 35, 0],
+      "time_window": [0, 100],
+      "threat": 0.4
+    },
+    {
+      "id": 4,
+      "required_resources": [3, 2],
+      "position": [40, 25, 0],
+      "time_window": [0, 100],
+      "threat": 0.7
+    },
+    {
+      "id": 5,
+      "required_resources": [2, 1],
+      "position": [5, 15, 0],
+      "time_window": [0, 100],
+      "threat": 0.5
+    }
+  ]
+}

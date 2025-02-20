@@ -11,13 +11,18 @@
 <img src="./assets/assigned.png" width=45%/> 
 </p>
 
-下图左侧为暴力搜索所得的最佳分配结果，右侧为联盟博弈得到的结果（`case1.json`, 目前仍存在问题）。
+下图左侧为暴力搜索所得的最佳分配结果，右侧为联盟博弈得到的结果（`case1.json`）。
 
 <p align="center"> 
-<img src="./assets/enumeration_result.png" width=45%/> 
-<img src="./assets/coalition_game_result.png" width=45%/> 
+<img src="./assets/case1_enumeration_result.png" width=45%/> 
+<img src="./assets/case1_coalition_game_result.png" width=45%/> 
 </p>
 
+`case3.json`(10 uavs, 5 tasks), 下图为联盟博弈分配得到的结果，暴力搜索没有在规定时间内得到结果。
+
+<p align="center"> 
+<img src="./assets/case3_coalition_game_result.png" width=75%/> 
+</p>
 
 ```python
 resources_num = 2
@@ -105,3 +110,8 @@ Best Score: 54.851725195536254
   - `uav.py`: the class for `UAV` and `UAVManager`.
   - `coalition.py`: the class for `CoalitionSet`.
   - `utils.py`: the utility functions.
+- `tests/`
+  - case0.json: 3 uavs, 2 tasks; no coalition.
+  - case1.json: 5 uavs, 2 tasks.
+  - case2.json: 5 uavs, 3 tasks.
+  - case3.json: 10 uavs, 5 tasks.

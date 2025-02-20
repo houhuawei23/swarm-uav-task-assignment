@@ -69,7 +69,7 @@ class CoalitionSet:
             self.coalitions[None].append(uav.id)
             self.uav2task[uav.id] = None
 
-    def get_unassigned_uavs(self):
+    def get_unassigned_uav_ids(self):
         return self.coalitions[None]
 
     def get_coalition(self, task_id):
@@ -170,7 +170,7 @@ class CoalitionSet:
                         head_length=0.5,
                     )
         # Plot unassigned UAVs
-        for uav_id in self.get_unassigned_uavs():
+        for uav_id in self.get_unassigned_uav_ids():
             uav = self.uav_manager.get_uav_by_id(uav_id)
             plt.scatter(
                 uav.position[0],

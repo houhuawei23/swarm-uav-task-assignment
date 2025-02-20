@@ -149,7 +149,9 @@ class CoalitionFormationGame:
 
         return utility
 
-    def cal_benefit_matrix(self, debug=False) -> np.ndarray:
+    def cal_benefit_matrix(
+        self, unassigned_uav_ids: List[int], task_ids: List[int], debug=False
+    ) -> np.ndarray:
         """Calculates the benefit matrix for UAVs and tasks.
         计算每个无人机对每个任务的收益矩阵
 
@@ -160,21 +162,16 @@ class CoalitionFormationGame:
             np.ndarray: A 2D numpy array of shape (n, m), where n is the number of UAVs and m is the number of tasks.
                         Each element benefit_matrix[i, j] represents the benefit of assigning UAV i to task j.
         """
-        n = self.uav_manager.nums()
-        m = self.task_manager.nums()
+        n = len(unassigned_uav_ids)
+        m = len(task_ids)
         benefit_matrix = np.zeros((n, m))
-        for i, uav in enumerate(self.uav_manager):
-            for j, task in enumerate(self.task_manager):
+
+        for i, uav_id in enumerate(unassigned_uav_ids):
+            for j, task_id in enumerate(task_ids):
+                uav = self.uav_manager.get_uav_by_id(uav_id)
+                task = self.task_manager.get_task_by_id(task_id)
                 benefit_matrix[i, j] = self.cal_uav_task_benefit(uav, task, debug=debug)
-                # benefit_matrix[i, j] = calculate_uav_task_benefit(
-                #     uav,
-                #     task,
-                #     self.coalition_set[uav.id],
-                #     self.map_shape,
-                #     self.alpha,
-                #     self.beta,
-                #     self.gamma,
-                # )
+
         if debug:
             print("Benefit Matrix:")
             print(benefit_matrix)
@@ -265,7 +262,7 @@ class CoalitionFormationGame:
         # 威胁代价计算
         return calculate_threat_cost(uav, task)
 
-    def match_tasks(self, benefit_matrix, debug=False):
+    def match_tasks(self, benefit_matrix, unassigned_uav_ids, task_ids, debug=False):
         """Matches UAVs to tasks based on the benefit matrix.
 
         This function uses the Hungarian algorithm (linear sum assignment) to find the optimal assignment
@@ -282,11 +279,14 @@ class CoalitionFormationGame:
         """
         # 最大加权匹配
         row_ind, col_ind = linear_sum_assignment(benefit_matrix, maximize=True)
+        # print(f"row_ind: {row_ind}, col_ind: {col_ind}")
+        have_assigned = False
         for uav_idx, task_idx in zip(row_ind, col_ind):
-            # uav: UAV = self.uavs[uav_idx]
-            # task: Task = self.tasks[task_idx]
-            uav: UAV = self.uav_manager.get_all_uavs()[uav_idx]
-            task: Task = self.task_manager.get_all_tasks()[task_idx]
+            print(unassigned_uav_ids, task_ids)
+            # print(f"uav_idx: {uav_idx}, task_idx: {task_idx}")
+            # print("here", unassigned_uav_ids[uav_idx])
+            uav: UAV = self.uav_manager.get_uav_by_id(unassigned_uav_ids[uav_idx])
+            task: Task = self.task_manager.get_task_by_id(task_ids[task_idx])
             if debug:
                 print(f"uav_idx: {uav_idx}, task_idx: {task_idx}")
 
@@ -296,6 +296,8 @@ class CoalitionFormationGame:
                 # 6. update the required resources of task
                 # task_obtained_resources += uav.resources
                 self.coalition_set.assign(uav, task)
+                have_assigned = True
+        return have_assigned
 
     def check_stability(self, debug=False):
         """Checks the stability of the current coalition assignments.
@@ -355,7 +357,7 @@ class CoalitionFormationGame:
             2. else go to 8.
         8. Exit.When all tasks exit, obtain the final coalition structure.
         """
-        max_iterations = 100
+        max_iterations = 10
         iter_cnt = 0
         while True:
             # in once iter, try to assign one uav to each task
@@ -366,12 +368,28 @@ class CoalitionFormationGame:
                 break
             iter_cnt += 1
             # 2. calculate the benefit matrix
-            benefit_matrix = self.cal_benefit_matrix(debug=debug)
+            unassigned_uav_ids = self.coalition_set.get_unassigned_uav_ids().copy()
+            task_ids = self.task_manager.get_task_ids()
+
+            benefit_matrix = self.cal_benefit_matrix(
+                unassigned_uav_ids, task_ids, debug=debug
+            )
+            print(unassigned_uav_ids)
+            print(task_ids)
+            print(benefit_matrix)
             # 3. matching based on maximum weighed principle
-            self.match_tasks(benefit_matrix, debug=debug)
-            if self.check_stability(debug=debug):
-                print(f"check_stability True, Iteration {iter_cnt} end.")
+            if not self.match_tasks(
+                benefit_matrix, unassigned_uav_ids, task_ids, debug=debug
+            ):
+                print("No more UAVs can be assigned to tasks. Over, break.")
                 break
+
+            if self.check_stability(debug=False):
+                print(f"check_stability True, Iteration {iter_cnt} Assign Valid.")
+                # print(f"Cur coalition set: {self.coalition_set}")
+            else:
+                print(f"check_stability False, Iteration {iter_cnt} Assign Invalid.")
+                # print(f"Cur coalition set: {self.coalition_set}")
 
         return self.coalition_set
 

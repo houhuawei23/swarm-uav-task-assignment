@@ -99,7 +99,10 @@ Best Score: 54.851725195536254
 ## TODO
 
 - [ ] implement the algorithm in the [paper](https://doi.org/10.1360/ssi-2024-0167).
-- [ ] fix bugs in CoalitionFormationGame task assignment algorithm.
+  - [ ] add time constraints
+- [x] fix bugs in CoalitionFormationGame task assignment algorithm.
+- [ ] Calculate various evaluation indicators, such as:
+  - task completion rate, task execution cost, and resource utilization
 
 ## Structure
 
@@ -115,3 +118,4 @@ Best Score: 54.851725195536254
   - case1.json: 5 uavs, 2 tasks.
   - case2.json: 5 uavs, 3 tasks.
   - case3.json: 10 uavs, 5 tasks.
+  - case4.json: 50 uavs, 5 tasks.

@@ -87,7 +87,7 @@ class CoalitionSet:
     def __str__(self):
         return str(self.coalitions)
 
-    def plot_map(self, output_path=None):
+    def plot_map(self, output_path=None, plot_unassigned=True, show=False):
         """Visualizes the UAVs and tasks on a 2D map, with circles indicating UAV coalitions."""
         plt.figure(figsize=(14, 14))
         # plt.figure()
@@ -170,22 +170,23 @@ class CoalitionSet:
                         head_length=0.5,
                     )
         # Plot unassigned UAVs
-        for uav_id in self.get_unassigned_uav_ids():
-            uav = self.uav_manager.get_uav_by_id(uav_id)
-            plt.scatter(
-                uav.position[0],
-                uav.position[1],
-                color="gray",
-                label=f"UAV {uav.id} (Unassigned)",
-                s=100,
-            )
-            plt.text(
-                uav.position[0],
-                uav.position[1] + text_delta,
-                f"{uav}",
-                fontsize=10,
-                ha="center",
-            )
+        if plot_unassigned:
+            for uav_id in self.get_unassigned_uav_ids():
+                uav = self.uav_manager.get_uav_by_id(uav_id)
+                plt.scatter(
+                    uav.position[0],
+                    uav.position[1],
+                    color="gray",
+                    label=f"UAV {uav.id} (Unassigned)",
+                    s=100,
+                )
+                plt.text(
+                    uav.position[0],
+                    uav.position[1] + text_delta,
+                    f"{uav}",
+                    fontsize=10,
+                    ha="center",
+                )
         plt.xlabel("X Coordinate")
         plt.ylabel("Y Coordinate")
         plt.title("UAVs and Tasks on Map")
@@ -194,7 +195,8 @@ class CoalitionSet:
         plt.legend()
         if output_path:
             plt.savefig(output_path)
-        plt.show()
+        if show:
+            plt.show()
 
 
 if __name__ == "__main__":

@@ -4,12 +4,15 @@ import numpy as np
 import itertools
 from uav import UAV, UAVManager
 from task import Task, TaskManager
-from coalition import CoalitionSet
+from coalition import CoalitionManager
 import matplotlib.pyplot as plt
 
-from utils import *
+from utils import calc_map_shape
 from itertools import product
 from typing import List, Dict
+
+from base import HyperParams
+from dataclasses import dataclass, field
 
 
 def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Dict[int, List[int]]]:
@@ -55,6 +58,7 @@ def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Di
     return assignments
 
 
+@dataclass
 class TaskAssignmentAlgorithm(ABC):
     """
     Abstract base class for task assignment algorithms.
@@ -64,30 +68,9 @@ class TaskAssignmentAlgorithm(ABC):
         task_manager (TaskManager): The TaskManager instance.
     """
 
-    def __init__(
-        self,
-        uav_manager: UAVManager,
-        task_manager: TaskManager,
-        resources_num: int,
-        map_shape,
-        alpha=1.0,
-        beta=1.0,
-        gamma=1.0,
-    ):
-        """
-        Initializes the task assignment algorithm.
-
-        Args:
-            uav_manager: The UAVManager instance.
-            task_manager: The TaskManager instance.
-        """
-        self.uav_manager = uav_manager
-        self.task_manager = task_manager
-        self.resources_num: int = resources_num  # 资源维度数
-        self.map_shape = map_shape  # 任务环境区域大小
-        self.alpha: float = alpha  # 资源贡献权重
-        self.beta: float = beta  # 路径成本权重
-        self.gamma: float = gamma  # 威胁权重
+    uav_manager: UAVManager
+    task_manager: TaskManager
+    hyper_params: HyperParams
 
     @abstractmethod
     def solve(self) -> Tuple[Dict[int, List[int]], float]:
@@ -103,13 +86,7 @@ class TaskAssignmentAlgorithm(ABC):
 
 
 def calcualte_assignment_score(
-    assignment: Dict[int, List[int]],
-    uav_manager: UAVManager,
-    task_manager: TaskManager,
-    map_shape,
-    alpha,
-    beta,
-    gamma,
+    assignment: Dict[int, List[int]], uav_manager: UAVManager, task_manager: TaskManager, hyper_params: HyperParams
 ):
     score = 0
     for task_id, uav_ids in assignment.items():
@@ -120,15 +97,19 @@ def calcualte_assignment_score(
             uav = uav_manager.get(uav_id)
             # distance = np.linalg.norm(uav.position - task.position)
             distance = uav.position.distance_to(task.position)
-            max_distance = np.linalg.norm(map_shape)
+            max_distance = np.linalg.norm(hyper_params.map_shape)
             resource_contribution = uav.resources.sum()  # simple
             all_uav_resources += uav.resources
             path_cost = 1 - distance / max_distance
             threat_cost = uav.value * task.threat
-            task_score += alpha * resource_contribution + beta * path_cost - gamma * threat_cost
+            task_score += (
+                hyper_params.alpha * resource_contribution
+                + hyper_params.beta * path_cost
+                - hyper_params.gamma * threat_cost
+            )
         resource_overflow = np.maximum((all_uav_resources - task.required_resources), 0).sum()
         # print(f"resource_overflow: {resource_overflow}")
-        task_score -= alpha * resource_overflow
+        task_score -= hyper_params.alpha * resource_overflow
         score += task_score
     return score
 
@@ -138,26 +119,6 @@ class EnumerationAlgorithm(TaskAssignmentAlgorithm):
     Implements an enumeration (brute-force) algorithm for task assignment.
     This algorithm checks all possible combinations of UAVs and tasks.
     """
-
-    def __init__(
-        self,
-        uav_manager: UAVManager,
-        task_manager: TaskManager,
-        resources_num: int,
-        map_shape,
-        alpha=1.0,
-        beta=1.0,
-        gamma=1.0,
-    ):
-        super().__init__(
-            uav_manager,
-            task_manager,
-            resources_num,
-            map_shape,
-            alpha,
-            beta,
-            gamma,
-        )
 
     def solve(self) -> Tuple[Dict[int, List[int]], float]:
         """
@@ -175,15 +136,7 @@ class EnumerationAlgorithm(TaskAssignmentAlgorithm):
         #     print(assignment)
         for assignment in all_assignments:
             # print(assignment)
-            score = calcualte_assignment_score(
-                assignment,
-                self.uav_manager,
-                self.task_manager,
-                self.map_shape,
-                self.alpha,
-                self.beta,
-                self.gamma,
-            )
+            score = calcualte_assignment_score(assignment, self.uav_manager, self.task_manager, self.hyper_params)
             # print(f"score: {score}")
             if score > best_score:
                 best_score = score
@@ -191,9 +144,9 @@ class EnumerationAlgorithm(TaskAssignmentAlgorithm):
         return best_assignment, best_score
 
 
-import json
-
 if __name__ == "__main__":
+    import json
+
     resources_num = 2
     map_shape = (20, 20, 0)
     gamma = 0.1
@@ -216,7 +169,7 @@ if __name__ == "__main__":
     print(f"Best Assignment: {best_assignment}")
     print(f"Best Score: {best_score}")
 
-    coalition_set = CoalitionSet(uav_manager, task_manager, assignment=best_assignment)
+    coalition_set = CoalitionManager(uav_manager, task_manager, assignment=best_assignment)
     coalition_set.plot_map()
 
     # uav_ids = uav_manager.get_uav_ids()

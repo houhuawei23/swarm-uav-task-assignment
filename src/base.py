@@ -115,6 +115,15 @@ class EntityManager:
         plot_entities_on_axes(ax, self.entities.values(), **kwargs)
 
 
+@dataclass(repr=True)
+class HyperParams:
+    resources_num: int  # 资源维度数
+    map_shape: Tuple[int, int, int]  # 任务环境区域大小
+    alpha: float  # 资源贡献权重
+    beta: float  # 路径成本权重
+    gamma: float  # 威胁权重
+
+
 if __name__ == "__main__":
     p1 = Point([1, 2, 3])
     p2 = Point([4, 5, 6])

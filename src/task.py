@@ -3,6 +3,15 @@ from typing import List, Optional
 from dataclasses import dataclass, field
 from base import Point, Entity, EntityManager
 
+def get_resources_weights(required_resources, task_obtained_resources):
+    still_required_resources = required_resources - task_obtained_resources
+    still_required_resources_pos = np.maximum(still_required_resources, 0)  # 将负值置为0
+    if np.sum(still_required_resources_pos) == 0:
+        return np.zeros_like(still_required_resources_pos)
+    else:
+        resources_weights = still_required_resources_pos / np.sum(still_required_resources_pos)
+        return resources_weights
+
 
 @dataclass(init=True, repr=True)
 class Task(Entity):
@@ -29,21 +38,12 @@ class Task(Entity):
         self.required_resources = np.array(self.required_resources)
         self.resources_nums = len(self.required_resources)
 
-    def get_resources_weights(self, task_obtained_resources=0):
-        still_required_resources = self.required_resources - task_obtained_resources
-        still_required_resources_pos = np.maximum(still_required_resources, 0)  # 将负值置为0
-        if np.sum(still_required_resources_pos) == 0:
-            return np.zeros_like(still_required_resources_pos)
-        else:
-            resources_weights = still_required_resources_pos / np.sum(still_required_resources_pos)
-            return resources_weights
-
     def to_dict(self):
         return {
             "id": self.id,
             "required_resources": self.required_resources.tolist(),
             "position": self.position.tolist(),
-            "time_window": self.time_window,
+            "time_windbeow": self.time_window,
             "threat": self.threat,
         }
 

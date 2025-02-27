@@ -10,7 +10,15 @@ from task import Task
 
 from uav import UAVManager
 from task import TaskManager
-from coalition import CoalitionSet
+from coalition import CoalitionManager
+
+
+def calc_map_shape(uav_manager: UAVManager, task_manager: TaskManager):
+    entities_list = uav_manager.get_all() + task_manager.get_all()
+    max_x = max(entity.position.x for entity in entities_list)
+    max_y = max(entity.position.y for entity in entities_list)
+
+    return (max_x + 1, max_y + 1, 0)
 
 
 def calculate_uav_task_benefit(
@@ -135,9 +143,7 @@ def format_json(json_file_path):
         print("Prettier is not installed or not found in your system PATH.")
 
 
-def save_uavs_and_tasks(
-    uav_manager: UAVManager, task_manager: TaskManager, output_file_path
-):
+def save_uavs_and_tasks(uav_manager: UAVManager, task_manager: TaskManager, output_file_path):
     # 将 UAVManager 和 TaskManager 的信息存储为 JSON 文件
     data = {
         "uavs": uav_manager.to_dict(),

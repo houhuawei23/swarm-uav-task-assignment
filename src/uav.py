@@ -47,7 +47,7 @@ class UAV(Entity):
         )
 
     def brief_info(self) -> str:
-        return f"T_{self.id}(re={self.resources}, val={self.value}, spd={self.max_speed})"
+        return f"U_{self.id}(re={self.resources}, val={self.value}, spd={self.max_speed})"
 
 
 @dataclass

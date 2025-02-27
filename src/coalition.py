@@ -7,7 +7,7 @@ from matplotlib.patches import Circle, Polygon, Wedge
 from base import plot_entities_on_axes
 
 
-class CoalitionSet:
+class CoalitionManager:
     def __init__(
         self,
         uav_manager: UAVManager,
@@ -20,7 +20,7 @@ class CoalitionSet:
         # 无人机-任务对应关系
         self.uav2task: Dict[int, int] = {uav.id: None for uav in uav_manager}
 
-        if assignment != None:
+        if assignment is not None:
             self.coalitions = assignment
             assigned_uavs = []
             for task_id, uav_ids in assignment.items():
@@ -69,12 +69,6 @@ class CoalitionSet:
 
     def get_taskid_by_uavid(self, uavid) -> int:
         return self.uav2task[uavid]
-
-    def __call__(self, *args, **kwds):
-        pass
-
-    def __getitem__(self, key):
-        return self.coalitions[key]
 
     def __str__(self):
         return str(self.coalitions)
@@ -172,6 +166,6 @@ if __name__ == "__main__":
         5: [3],
     }
 
-    coalition_set = CoalitionSet(uav_manager, task_manager, assignment)
+    coalition_set = CoalitionManager(uav_manager, task_manager, assignment)
 
     coalition_set.plot_map()

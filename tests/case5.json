@@ -1,0 +1,426 @@
+{
+  "uavs": [
+    {
+      "id": 1,
+      "resources": [23, 11],
+      "position": [97, 23, 0],
+      "value": 40,
+      "max_speed": 23
+    },
+    {
+      "id": 2,
+      "resources": [25, 22],
+      "position": [99, 50, 0],
+      "value": 35,
+      "max_speed": 29
+    },
+    {
+      "id": 3,
+      "resources": [7, 24],
+      "position": [1, 53, 0],
+      "value": 29,
+      "max_speed": 24
+    },
+    {
+      "id": 4,
+      "resources": [10, 22],
+      "position": [46, 59, 0],
+      "value": 45,
+      "max_speed": 21
+    },
+    {
+      "id": 5,
+      "resources": [8, 9],
+      "position": [100, 0, 0],
+      "value": 29,
+      "max_speed": 27
+    },
+    {
+      "id": 6,
+      "resources": [9, 10],
+      "position": [22, 83, 0],
+      "value": 50,
+      "max_speed": 30
+    },
+    {
+      "id": 7,
+      "resources": [7, 14],
+      "position": [100, 79, 0],
+      "value": 29,
+      "max_speed": 30
+    },
+    {
+      "id": 8,
+      "resources": [22, 11],
+      "position": [56, 93, 0],
+      "value": 48,
+      "max_speed": 21
+    },
+    {
+      "id": 9,
+      "resources": [5, 7],
+      "position": [25, 40, 0],
+      "value": 36,
+      "max_speed": 21
+    },
+    {
+      "id": 10,
+      "resources": [19, 22],
+      "position": [18, 71, 0],
+      "value": 50,
+      "max_speed": 22
+    },
+    {
+      "id": 11,
+      "resources": [7, 17],
+      "position": [74, 1, 0],
+      "value": 27,
+      "max_speed": 23
+    },
+    {
+      "id": 12,
+      "resources": [6, 5],
+      "position": [64, 20, 0],
+      "value": 47,
+      "max_speed": 20
+    },
+    {
+      "id": 13,
+      "resources": [14, 10],
+      "position": [72, 74, 0],
+      "value": 28,
+      "max_speed": 27
+    },
+    {
+      "id": 14,
+      "resources": [25, 9],
+      "position": [98, 9, 0],
+      "value": 49,
+      "max_speed": 24
+    },
+    {
+      "id": 15,
+      "resources": [21, 25],
+      "position": [95, 90, 0],
+      "value": 34,
+      "max_speed": 25
+    },
+    {
+      "id": 16,
+      "resources": [24, 22],
+      "position": [69, 41, 0],
+      "value": 39,
+      "max_speed": 20
+    },
+    {
+      "id": 17,
+      "resources": [22, 6],
+      "position": [23, 66, 0],
+      "value": 30,
+      "max_speed": 28
+    },
+    {
+      "id": 18,
+      "resources": [6, 6],
+      "position": [27, 46, 0],
+      "value": 36,
+      "max_speed": 24
+    },
+    {
+      "id": 19,
+      "resources": [18, 21],
+      "position": [40, 63, 0],
+      "value": 34,
+      "max_speed": 26
+    },
+    {
+      "id": 20,
+      "resources": [12, 23],
+      "position": [85, 26, 0],
+      "value": 46,
+      "max_speed": 29
+    },
+    {
+      "id": 21,
+      "resources": [21, 13],
+      "position": [55, 10, 0],
+      "value": 47,
+      "max_speed": 21
+    },
+    {
+      "id": 22,
+      "resources": [16, 13],
+      "position": [13, 22, 0],
+      "value": 46,
+      "max_speed": 24
+    },
+    {
+      "id": 23,
+      "resources": [19, 14],
+      "position": [56, 92, 0],
+      "value": 29,
+      "max_speed": 25
+    },
+    {
+      "id": 24,
+      "resources": [10, 24],
+      "position": [86, 37, 0],
+      "value": 25,
+      "max_speed": 23
+    },
+    {
+      "id": 25,
+      "resources": [12, 25],
+      "position": [20, 3, 0],
+      "value": 30,
+      "max_speed": 27
+    },
+    {
+      "id": 26,
+      "resources": [5, 21],
+      "position": [94, 86, 0],
+      "value": 50,
+      "max_speed": 29
+    },
+    {
+      "id": 27,
+      "resources": [18, 19],
+      "position": [23, 5, 0],
+      "value": 35,
+      "max_speed": 23
+    },
+    {
+      "id": 28,
+      "resources": [13, 9],
+      "position": [72, 73, 0],
+      "value": 49,
+      "max_speed": 26
+    },
+    {
+      "id": 29,
+      "resources": [7, 19],
+      "position": [45, 81, 0],
+      "value": 38,
+      "max_speed": 26
+    },
+    {
+      "id": 30,
+      "resources": [20, 9],
+      "position": [41, 6, 0],
+      "value": 44,
+      "max_speed": 23
+    },
+    {
+      "id": 31,
+      "resources": [23, 23],
+      "position": [34, 51, 0],
+      "value": 48,
+      "max_speed": 25
+    },
+    {
+      "id": 32,
+      "resources": [11, 7],
+      "position": [95, 76, 0],
+      "value": 49,
+      "max_speed": 21
+    },
+    {
+      "id": 33,
+      "resources": [8, 22],
+      "position": [63, 2, 0],
+      "value": 46,
+      "max_speed": 27
+    },
+    {
+      "id": 34,
+      "resources": [12, 12],
+      "position": [52, 58, 0],
+      "value": 45,
+      "max_speed": 21
+    },
+    {
+      "id": 35,
+      "resources": [25, 6],
+      "position": [19, 9, 0],
+      "value": 36,
+      "max_speed": 24
+    },
+    {
+      "id": 36,
+      "resources": [23, 20],
+      "position": [41, 71, 0],
+      "value": 38,
+      "max_speed": 20
+    },
+    {
+      "id": 37,
+      "resources": [13, 18],
+      "position": [17, 68, 0],
+      "value": 48,
+      "max_speed": 30
+    },
+    {
+      "id": 38,
+      "resources": [18, 25],
+      "position": [50, 75, 0],
+      "value": 47,
+      "max_speed": 27
+    },
+    {
+      "id": 39,
+      "resources": [19, 17],
+      "position": [67, 71, 0],
+      "value": 33,
+      "max_speed": 22
+    },
+    {
+      "id": 40,
+      "resources": [14, 6],
+      "position": [50, 32, 0],
+      "value": 39,
+      "max_speed": 26
+    },
+    {
+      "id": 41,
+      "resources": [23, 25],
+      "position": [89, 92, 0],
+      "value": 49,
+      "max_speed": 26
+    },
+    {
+      "id": 42,
+      "resources": [15, 10],
+      "position": [39, 94, 0],
+      "value": 39,
+      "max_speed": 24
+    },
+    {
+      "id": 43,
+      "resources": [21, 8],
+      "position": [74, 32, 0],
+      "value": 35,
+      "max_speed": 23
+    },
+    {
+      "id": 44,
+      "resources": [8, 25],
+      "position": [32, 17, 0],
+      "value": 37,
+      "max_speed": 28
+    },
+    {
+      "id": 45,
+      "resources": [10, 12],
+      "position": [64, 29, 0],
+      "value": 37,
+      "max_speed": 24
+    },
+    {
+      "id": 46,
+      "resources": [21, 25],
+      "position": [17, 97, 0],
+      "value": 46,
+      "max_speed": 21
+    },
+    {
+      "id": 47,
+      "resources": [22, 14],
+      "position": [33, 27, 0],
+      "value": 25,
+      "max_speed": 26
+    },
+    {
+      "id": 48,
+      "resources": [23, 8],
+      "position": [67, 89, 0],
+      "value": 34,
+      "max_speed": 27
+    },
+    {
+      "id": 49,
+      "resources": [14, 17],
+      "position": [87, 56, 0],
+      "value": 32,
+      "max_speed": 21
+    },
+    {
+      "id": 50,
+      "resources": [12, 8],
+      "position": [11, 26, 0],
+      "value": 30,
+      "max_speed": 25
+    }
+  ],
+  "tasks": [
+    {
+      "id": 1,
+      "required_resources": [73, 54],
+      "position": [41, 24, 0],
+      "time_window": [0, 99],
+      "threat": 0.9
+    },
+    {
+      "id": 2,
+      "required_resources": [62, 75],
+      "position": [33, 84, 0],
+      "time_window": [8, 97],
+      "threat": 0.68
+    },
+    {
+      "id": 3,
+      "required_resources": [72, 53],
+      "position": [8, 17, 0],
+      "time_window": [0, 94],
+      "threat": 0.18
+    },
+    {
+      "id": 4,
+      "required_resources": [57, 67],
+      "position": [4, 83, 0],
+      "time_window": [5, 92],
+      "threat": 0.35
+    },
+    {
+      "id": 5,
+      "required_resources": [50, 52],
+      "position": [28, 87, 0],
+      "time_window": [5, 97],
+      "threat": 0.33
+    },
+    {
+      "id": 6,
+      "required_resources": [59, 61],
+      "position": [58, 68, 0],
+      "time_window": [6, 92],
+      "threat": 0.26
+    },
+    {
+      "id": 7,
+      "required_resources": [63, 58],
+      "position": [34, 83, 0],
+      "time_window": [0, 91],
+      "threat": 0.35
+    },
+    {
+      "id": 8,
+      "required_resources": [68, 56],
+      "position": [4, 49, 0],
+      "time_window": [4, 95],
+      "threat": 0.3
+    },
+    {
+      "id": 9,
+      "required_resources": [52, 71],
+      "position": [10, 36, 0],
+      "time_window": [9, 96],
+      "threat": 0.47
+    },
+    {
+      "id": 10,
+      "required_resources": [71, 51],
+      "position": [39, 64, 0],
+      "time_window": [4, 91],
+      "threat": 0.59
+    }
+  ]
+}

@@ -3,6 +3,8 @@ from task import Task, TaskManager
 from typing import List, Tuple, Dict
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle, Polygon, Wedge
+from base import plot_entities_on_axes
 
 
 class CoalitionSet:
@@ -25,30 +27,20 @@ class CoalitionSet:
                 for uav_id in uav_ids:
                     assigned_uavs.append(uav_id)
                     self.uav2task[uav_id] = task_id
-            self.coalitions[None] = list(
-                set(uav_manager.get_uav_ids()) - set(assigned_uavs)
-            )
+            self.coalitions[None] = list(set(uav_manager.get_ids()) - set(assigned_uavs))
         else:
-            self.coalitions: Dict[int, List[int]] = {
-                task.id: [] for task in task_manager
-            }
-            self.coalitions[None] = uav_manager.get_uav_ids()  # 未分配任务的无人机
+            self.coalitions: Dict[int, List[int]] = {task.id: [] for task in task_manager}
+            self.coalitions[None] = uav_manager.get_ids()  # 未分配任务的无人机
 
         # 维护每个任务当前需要的资源向量
         # self.required_resources = {task.id: task.required_resources for task in task_manager}
-        self.task_obtained_resources = {
-            task.id: np.zeros(task.required_resources.shape) for task in task_manager
-        }
+        self.task_obtained_resources = {task.id: np.zeros(task.required_resources.shape) for task in task_manager}
 
     def assign(self, uav: UAV, task: Task):
         """Assigns a UAV to a task, updating the coalitions dictionary."""
         # print(f"Assigning u{uav.id} to t{task.id}")
         if self.uav2task[uav.id] is not None:
-            print(
-                "Error: UAV {} has already been assigned to task {}".format(
-                    uav.id, self.uav2task[uav.id]
-                )
-            )
+            print("Error: UAV {} has already been assigned to task {}".format(uav.id, self.uav2task[uav.id]))
             return
             # self.coalitions[self.uav2task[uav.id]].remove(uav)
         self.coalitions[task.id].append(uav.id)
@@ -87,116 +79,75 @@ class CoalitionSet:
     def __str__(self):
         return str(self.coalitions)
 
-    def plot_map(self, output_path=None, plot_unassigned=True, show=False):
-        """Visualizes the UAVs and tasks on a 2D map, with circles indicating UAV coalitions."""
-        plt.figure(figsize=(14, 14))
-        # plt.figure()
+    def plot_coalition(self, ax: plt.Axes, task_id: int, coalition: List[int]):
         text_delta = 0.2  # 文本偏移量
+        task = self.task_manager.get(task_id)
+        # Draw a circle around UAVs in the same coalition
+        if len(coalition) > 1:
+            x_coords = [self.uav_manager.get(uav_id).position.x for uav_id in coalition]
+            y_coords = [self.uav_manager.get(uav_id).position.y for uav_id in coalition]
+            x_coords.append(task.position.x)
+            y_coords.append(task.position.y)
+            # print(x_coords, y_coords)
+            center_x = np.mean(x_coords)
+            center_y = np.mean(y_coords)
+            radius = max(np.max(x_coords) - center_x, np.max(y_coords) - center_y) + 3
+
+            circle = Circle(
+                (center_x, center_y),
+                radius,
+                color="blue",
+                fill=False,
+                linestyle="--",
+            )
+            ax.add_patch(circle)
+
+        # Plot UAVs
+        uav_list = [self.uav_manager.get(uav_id) for uav_id in coalition]
+        plot_entities_on_axes(ax, uav_list, color="blue", marker="o")
+
+        # darw an arrow from UAV to task
+        for uav_id in coalition:
+            uav = self.uav_manager.get(uav_id)
+            delta_xyz = task.position.xyz - uav.position.xyz
+            unit_delta_xyz = delta_xyz / np.linalg.norm(delta_xyz)
+            arrow_x, arrow_y, _ = uav.position.xyz + unit_delta_xyz * 0.5
+            arrow_dx, arrow_dy, _ = delta_xyz - unit_delta_xyz * 1.5
+            ax.arrow(
+                arrow_x,
+                arrow_y,
+                arrow_dx,
+                arrow_dy,
+                color="black",
+                head_width=0.5,
+                head_length=0.5,
+            )
+
+    def plot_map(self, output_path=None, plot_unassigned=True, show=False):
+        fig, ax = plt.subplots(figsize=(14, 14))
+
         # Plot tasks
-        for task in self.task_manager:
-            plt.scatter(
-                task.position[0],
-                task.position[1],
-                color="red",
-                label=f"Task {task.id}",
-                s=200,
-                marker="s",
-            )
-            plt.text(
-                task.position[0],
-                task.position[1] + text_delta,
-                f"{task}",
-                fontsize=12,
-                ha="center",
-            )
+        self.task_manager.plot(ax, color="red", marker="s")
+        # self.uav_manager.plot(ax, color="blue", marker="o")
+
         # Plot UAVs and their coalitions
         for task_id, coalition in self.coalitions.items():
-            if task_id is not None:
-                task = self.task_manager.get_task_by_id(task_id)
-                # Draw a circle around UAVs in the same coalition
-                if len(coalition) > 1:
-                    x_coords = [
-                        self.uav_manager.get_uav_by_id(uav_id).position[0]
-                        for uav_id in coalition
-                    ]
-                    y_coords = [
-                        self.uav_manager.get_uav_by_id(uav_id).position[1]
-                        for uav_id in coalition
-                    ]
-                    x_coords.append(task.position[0])
-                    y_coords.append(task.position[1])
-                    # print(x_coords, y_coords)
-                    center_x = np.mean(x_coords)
-                    center_y = np.mean(y_coords)
-                    radius = (
-                        max(np.max(x_coords) - center_x, np.max(y_coords) - center_y)
-                        + 3
-                    )
-                    circle = plt.Circle(
-                        (center_x, center_y),
-                        radius,
-                        color="blue",
-                        fill=False,
-                        linestyle="--",
-                    )
-                    plt.gca().add_patch(circle)
+            if task_id is None:
+                continue
+            self.plot_coalition(ax, task_id, coalition)
 
-                # Plot UAVs
-                for uav_id in coalition:
-                    uav = self.uav_manager.get_uav_by_id(uav_id)
-                    plt.scatter(
-                        uav.position[0],
-                        uav.position[1],
-                        color="blue",
-                        label=f"UAV {uav.id}",
-                        s=100,
-                    )
-                    plt.text(
-                        uav.position[0],
-                        uav.position[1] + text_delta,
-                        f"{uav}",
-                        fontsize=10,
-                        ha="center",
-                    )
-
-                    # darw an arrow from UAV to task
-                    plt.arrow(
-                        uav.position[0],
-                        uav.position[1],
-                        task.position[0] - uav.position[0],
-                        task.position[1] - uav.position[1],
-                        color="black",
-                        head_width=0.5,
-                        head_length=0.5,
-                    )
         # Plot unassigned UAVs
         if plot_unassigned:
-            for uav_id in self.get_unassigned_uav_ids():
-                uav = self.uav_manager.get_uav_by_id(uav_id)
-                plt.scatter(
-                    uav.position[0],
-                    uav.position[1],
-                    color="gray",
-                    label=f"UAV {uav.id} (Unassigned)",
-                    s=100,
-                )
-                plt.text(
-                    uav.position[0],
-                    uav.position[1] + text_delta,
-                    f"{uav}",
-                    fontsize=10,
-                    ha="center",
-                )
-        plt.xlabel("X Coordinate")
-        plt.ylabel("Y Coordinate")
-        plt.title("UAVs and Tasks on Map")
-        plt.grid(True)
-        # plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-        plt.legend()
-        if output_path:
-            plt.savefig(output_path)
-        if show:
-            plt.show()
+            unassigned_uavs = [self.uav_manager.get(uav_id) for uav_id in self.get_unassigned_uav_ids()]
+            plot_entities_on_axes(ax, unassigned_uavs, color="gray", marker="o")
+
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_title("Entities")
+        ax.grid(True)
+        ax.legend()
+
+        plt.show()
 
 
 if __name__ == "__main__":

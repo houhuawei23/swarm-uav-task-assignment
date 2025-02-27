@@ -12,9 +12,7 @@ from itertools import product
 from typing import List, Dict
 
 
-def generate_all_assignments(
-    uav_ids: List[int], task_ids: List[int]
-) -> List[Dict[int, List[int]]]:
+def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Dict[int, List[int]]]:
     """
     Generates all possible assignments of tasks to UAVs.
 
@@ -31,10 +29,7 @@ def generate_all_assignments(
         if uav_index == len(uav_ids):
             # 所有无人机都已处理，将当前分配方案添加到结果中
             # 使用固定的任务 ID 顺序来确保格式一致
-            sorted_assignment = {
-                task_id: sorted(current_assignment.get(task_id, []))
-                for task_id in task_ids
-            }
+            sorted_assignment = {task_id: sorted(current_assignment.get(task_id, [])) for task_id in task_ids}
             if sorted_assignment not in assignments:
                 assignments.append(sorted_assignment)
             return
@@ -118,23 +113,20 @@ def calcualte_assignment_score(
 ):
     score = 0
     for task_id, uav_ids in assignment.items():
-        task = task_manager.get_task_by_id(task_id)
+        task = task_manager.get(task_id)
         task_score = 0
         all_uav_resources = np.zeros_like(task.required_resources)
         for uav_id in uav_ids:
-            uav = uav_manager.get_uav_by_id(uav_id)
-            distance = np.linalg.norm(uav.position - task.position)
+            uav = uav_manager.get(uav_id)
+            # distance = np.linalg.norm(uav.position - task.position)
+            distance = uav.position.distance_to(task.position)
             max_distance = np.linalg.norm(map_shape)
             resource_contribution = uav.resources.sum()  # simple
             all_uav_resources += uav.resources
             path_cost = 1 - distance / max_distance
             threat_cost = uav.value * task.threat
-            task_score += (
-                alpha * resource_contribution + beta * path_cost - gamma * threat_cost
-            )
-        resource_overflow = np.maximum(
-            (all_uav_resources - task.required_resources), 0
-        ).sum()
+            task_score += alpha * resource_contribution + beta * path_cost - gamma * threat_cost
+        resource_overflow = np.maximum((all_uav_resources - task.required_resources), 0).sum()
         # print(f"resource_overflow: {resource_overflow}")
         task_score -= alpha * resource_overflow
         score += task_score
@@ -173,8 +165,8 @@ class EnumerationAlgorithm(TaskAssignmentAlgorithm):
         """
         # Initialize with negative infinity for maximization
 
-        uav_ids = self.uav_manager.get_uav_ids()
-        task_ids = self.task_manager.get_task_ids()
+        uav_ids = self.uav_manager.get_ids()
+        task_ids = self.task_manager.get_ids()
         best_assignment = None
         best_score = -float("inf")
         all_assignments = generate_all_assignments(uav_ids, task_ids)
@@ -199,22 +191,19 @@ class EnumerationAlgorithm(TaskAssignmentAlgorithm):
         return best_assignment, best_score
 
 
+import json
+
 if __name__ == "__main__":
     resources_num = 2
     map_shape = (20, 20, 0)
     gamma = 0.1
 
-    # 初始化无人机
-    uav1 = UAV(1, [5, 3], [0, 0, 0], 10, 20)
-    uav2 = UAV(2, [3, 4], [10, 10, 0], 15, 25)
-    uav3 = UAV(3, [2, 5], [20, 20, 0], 20, 30)
-    uavs = [uav1, uav2, uav3]
-    uav_manager = UAVManager(uavs)
-    # 初始化任务
-    task1 = Task(5, [4, 2], [5, 5, 0], [0, 100], 0.5)
-    task2 = Task(7, [3, 5], [15, 15, 0], [0, 100], 0.7)
-    tasks = [task1, task2]
-    task_manager = TaskManager(tasks)
+    with open("./tests/case1.json", "r") as f:
+        data = json.load(f)
+
+    uav_manager = UAVManager.from_dict(data["uavs"])
+    task_manager = TaskManager.from_dict(data["tasks"])
+
     enumeration_algorithm = EnumerationAlgorithm(
         uav_manager,
         task_manager,

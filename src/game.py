@@ -89,7 +89,7 @@ class CoalitionFormationGame:
         for (
             uav_id
         ) in coalition:  # ??? coalition=[u1, u2] on t2, 效用不应该简单叠加吧！！
-            uav = self.uav_manager.get_uav_by_id(uav_id)
+            uav = self.uav_manager.get(uav_id)
             utility += self.cal_uav_task_benefit(uav, task, debug=debug)
         if debug:
             print(f"  utility={utility:.2f}")
@@ -105,7 +105,7 @@ class CoalitionFormationGame:
         if debug:
             print(f"cal_uav_utility(uav=u{uav.id})")
         assigned_task_id = self.coalition_set.get_taskid_by_uavid(uav.id)
-        assigned_task = self.task_manager.get_task_by_id(assigned_task_id)
+        assigned_task = self.task_manager.get(assigned_task_id)
         coalition = self.coalition_set.get_coalition(assigned_task_id).copy()
         R_ctj = self.cal_task_coalition_utility(
             assigned_task,
@@ -168,8 +168,8 @@ class CoalitionFormationGame:
 
         for i, uav_id in enumerate(unassigned_uav_ids):
             for j, task_id in enumerate(task_ids):
-                uav = self.uav_manager.get_uav_by_id(uav_id)
-                task = self.task_manager.get_task_by_id(task_id)
+                uav = self.uav_manager.get(uav_id)
+                task = self.task_manager.get(task_id)
                 benefit_matrix[i, j] = self.cal_uav_task_benefit(uav, task, debug=debug)
 
         if debug:
@@ -285,8 +285,8 @@ class CoalitionFormationGame:
             print(unassigned_uav_ids, task_ids)
             # print(f"uav_idx: {uav_idx}, task_idx: {task_idx}")
             # print("here", unassigned_uav_ids[uav_idx])
-            uav: UAV = self.uav_manager.get_uav_by_id(unassigned_uav_ids[uav_idx])
-            task: Task = self.task_manager.get_task_by_id(task_ids[task_idx])
+            uav: UAV = self.uav_manager.get(unassigned_uav_ids[uav_idx])
+            task: Task = self.task_manager.get(task_ids[task_idx])
             if debug:
                 print(f"uav_idx: {uav_idx}, task_idx: {task_idx}")
 
@@ -318,7 +318,7 @@ class CoalitionFormationGame:
             #     f"Checking stability for task {task.id}, coalition: {self.coalition_set[task.id]}"
             # )
             for uav_id in self.coalition_set[task.id]:
-                uav = self.uav_manager.get_uav_by_id(uav_id)
+                uav = self.uav_manager.get(uav_id)
                 cur_utility = self.cal_uav_utility(uav, debug=False)
                 if debug:
                     print(f"Cur utility: u{uav.id}-t{task.id}={cur_utility}")
@@ -369,7 +369,7 @@ class CoalitionFormationGame:
             iter_cnt += 1
             # 2. calculate the benefit matrix
             unassigned_uav_ids = self.coalition_set.get_unassigned_uav_ids().copy()
-            task_ids = self.task_manager.get_task_ids()
+            task_ids = self.task_manager.get_ids()
 
             benefit_matrix = self.cal_benefit_matrix(
                 unassigned_uav_ids, task_ids, debug=debug

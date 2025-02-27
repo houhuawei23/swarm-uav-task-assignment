@@ -95,7 +95,8 @@ def calculate_path_cost(uav: UAV, task: Task, map_shape, val, mu=-1.0):
     if val <= 0:
         return mu
 
-    distance = np.linalg.norm(uav.position - task.position)
+    # distance = np.linalg.norm(uav.position - task.position)
+    distance = uav.position.distance_to(task.position)
     # max_distance = np.sqrt(100**2 + 100**2)  # 假设最大距离
     max_distance = np.linalg.norm(map_shape)  # 任务环境区域大小
 

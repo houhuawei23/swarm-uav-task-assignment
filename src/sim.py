@@ -41,7 +41,7 @@ def run_enumeration(
     enu_coalition_set = CoalitionSet(
         uav_manager, task_manager, assignment=best_assignment
     )
-    enu_coalition_set.plot_map("enumeration_result.png")
+    enu_coalition_set.plot_map(".enumeration_result.png")
 
 
 def run_coalition_game(
@@ -72,7 +72,7 @@ def run_coalition_game(
     if result_queue is not None:
         result_queue.put(elapsed_time)
     print(f"Coalition Game Result: {coalition_set}")
-    coalition_set.plot_map("coalition_game_result.png", plot_unassigned=True)
+    coalition_set.plot_map(".coalition_game_result.png", plot_unassigned=False)
 
 
 def multi_processes_run(
@@ -124,13 +124,13 @@ def simple_run(
     gamma=0.1,
     timeout=10,
 ):
-    run_enumeration(
-        uav_manager,
-        task_manager,
-        resources_num,
-        map_shape,
-        gamma=gamma,
-    )
+    # run_enumeration(
+    #     uav_manager,
+    #     task_manager,
+    #     resources_num,
+    #     map_shape,
+    #     gamma=gamma,
+    # )
     run_coalition_game(
         uav_manager,
         task_manager,

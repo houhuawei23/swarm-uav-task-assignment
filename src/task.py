@@ -3,6 +3,7 @@ from typing import List, Optional
 from dataclasses import dataclass, field
 from base import Point, Entity, EntityManager
 
+
 def get_resources_weights(required_resources, task_obtained_resources):
     still_required_resources = required_resources - task_obtained_resources
     still_required_resources_pos = np.maximum(still_required_resources, 0)  # 将负值置为0
@@ -68,6 +69,9 @@ class TaskManager(EntityManager):
 
     def get(self, id) -> Task:
         return super().get(id)
+
+    def get_all(self) -> List[Task]:
+        return super().get_all()
 
     @classmethod
     def from_dict(cls, data):

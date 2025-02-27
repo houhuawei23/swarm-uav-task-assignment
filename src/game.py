@@ -7,7 +7,12 @@ from scipy.optimize import linear_sum_assignment
 from uav import UAV, UAVManager
 from task import Task, TaskManager, get_resources_weights
 from coalition import CoalitionManager
-from utils import calculate_path_cost, calculate_resource_contribution, calculate_threat_cost
+from utils import (
+    calculate_path_cost,
+    calculate_resource_contribution,
+    calculate_threat_cost,
+    calculate_obtained_resources,
+)
 from base import HyperParams
 from dataclasses import dataclass, field
 
@@ -81,13 +86,18 @@ def cal_uav_task_benefit(
     # 计算资源贡献
     resource_contribution = cal_resource_contribution(uav, task, task_collation, task_obtained_resources, debug)
     # 计算路径成本
-    path_cost = calculate_path_cost(uav, task, map_shape=hyper_params.map_shape, val=resource_contribution)
+    path_cost = calculate_path_cost(uav, task, resource_contribution, hyper_params.map_shape, hyper_params.mu)
     # 计算威胁代价
     threat_cost = calculate_threat_cost(uav, task)
     # 总收益
     total_benefit = (
         hyper_params.alpha * resource_contribution + hyper_params.beta * path_cost - hyper_params.gamma * threat_cost
     )
+    # check time window
+    min_uav_fly_time = uav.position.distance_to(task.position) / uav.max_speed
+    if min_uav_fly_time > task.time_window[1]:
+        total_benefit = -100
+    # debug = True
     if debug:
         print(
             f"  val={resource_contribution:.2f}, path_cost={path_cost:.2f}, threat_cost={threat_cost:.2f}, benefit={total_benefit:.2f}"
@@ -108,7 +118,7 @@ def cal_task_on_given_coalition_benefit(
     utility = 0.0
     for uav_id in given_coalition:  # ??? coalition=[u1, u2] on t2, 效用不应该简单叠加吧！！
         uav = uav_manager.get(uav_id)
-        obtained_resources = cal_obtained_resources(given_coalition, uav_manager, hyper_params.resources_num)
+        obtained_resources = calculate_obtained_resources(given_coalition, uav_manager, hyper_params.resources_num)
 
         benefit = cal_uav_task_benefit(uav, task, given_coalition, obtained_resources, hyper_params)
         utility += benefit
@@ -116,15 +126,6 @@ def cal_task_on_given_coalition_benefit(
         print(f"  utility={utility:.2f}")
         print("cal_task_coalition_utility finished")
     return utility
-
-
-def cal_obtained_resources(collation: List[int], uav_manager: UAVManager, resources_num: int) -> List[float]:
-    obtained_resources = np.zeros(resources_num)
-    for uav_id in collation:
-        uav = uav_manager.get(uav_id)
-        obtained_resources += uav.resources
-
-    return obtained_resources
 
 
 @dataclass
@@ -189,12 +190,12 @@ class CoalitionFormationGame:
                 uav = self.uav_manager.get(uav_id)
                 task = self.task_manager.get(task_id)
                 coalition = self.coalition_manager.get_coalition(task_id)
-                obtained_resources = cal_obtained_resources(
+                obtained_resources = calculate_obtained_resources(
                     coalition, self.uav_manager, self.hyper_params.resources_num
                 )
 
                 benefit_matrix[i, j] = cal_uav_task_benefit(uav, task, coalition, obtained_resources, self.hyper_params)
-
+        # debug = True
         if debug:
             print("Benefit Matrix:")
             print(benefit_matrix)
@@ -272,7 +273,6 @@ class CoalitionFormationGame:
         Returns:
             bool: True if the coalition is stable, False otherwise.
         """
-        debug = True
         stable = True
         # 遍历所有任务的所有已分配的无人机
         for taski in self.task_manager:
@@ -324,13 +324,12 @@ class CoalitionFormationGame:
             2. else go to 8.
         8. Exit.When all tasks exit, obtain the final coalition structure.
         """
-        max_iterations = 10
         iter_cnt = 0
         while True:
             # in once iter, try to assign one uav to each task
             print(f"Iteration {iter_cnt} begin.")
             print(f"Cur coalition set: {self.coalition_manager}")
-            if iter_cnt >= max_iterations:
+            if iter_cnt >= self.hyper_params.max_iter:
                 print("Max iterations reached, may have dead loop")
                 break
             iter_cnt += 1

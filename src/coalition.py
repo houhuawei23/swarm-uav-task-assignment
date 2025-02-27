@@ -4,7 +4,8 @@ from typing import List, Tuple, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Polygon, Wedge
-from base import plot_entities_on_axes
+from base import plot_entities_on_axes, HyperParams
+from utils import evaluate_assignment
 
 
 class CoalitionManager:
@@ -13,24 +14,25 @@ class CoalitionManager:
         uav_manager: UAVManager,
         task_manager: TaskManager,
         assignment: Dict[int, List[int]] = None,
+        hyper_params: HyperParams = None,
     ):
         # 任务联盟: task.id: int -> uav list: List[UAV]
         self.uav_manager = uav_manager
         self.task_manager = task_manager
         # 无人机-任务对应关系
         self.uav2task: Dict[int, int] = {uav.id: None for uav in uav_manager}
-
+        self.hyper_params = hyper_params
         if assignment is not None:
-            self.coalitions = assignment
+            self.task2coalition = assignment
             assigned_uavs = []
             for task_id, uav_ids in assignment.items():
                 for uav_id in uav_ids:
                     assigned_uavs.append(uav_id)
                     self.uav2task[uav_id] = task_id
-            self.coalitions[None] = list(set(uav_manager.get_ids()) - set(assigned_uavs))
+            self.task2coalition[None] = list(set(uav_manager.get_ids()) - set(assigned_uavs))
         else:
-            self.coalitions: Dict[int, List[int]] = {task.id: [] for task in task_manager}
-            self.coalitions[None] = uav_manager.get_ids()  # 未分配任务的无人机
+            self.task2coalition: Dict[int, List[int]] = {task.id: [] for task in task_manager}
+            self.task2coalition[None] = uav_manager.get_ids()  # 未分配任务的无人机
 
         # 维护每个任务当前需要的资源向量
         # self.required_resources = {task.id: task.required_resources for task in task_manager}
@@ -43,10 +45,10 @@ class CoalitionManager:
             print("Error: UAV {} has already been assigned to task {}".format(uav.id, self.uav2task[uav.id]))
             return
             # self.coalitions[self.uav2task[uav.id]].remove(uav)
-        self.coalitions[task.id].append(uav.id)
+        self.task2coalition[task.id].append(uav.id)
         self.task_obtained_resources[task.id] += uav.resources
         # print(self.coalitions)
-        self.coalitions[None].remove(uav.id)
+        self.task2coalition[None].remove(uav.id)
         self.uav2task[uav.id] = task.id
 
     def unassign(self, uav: UAV):
@@ -56,22 +58,22 @@ class CoalitionManager:
         if task_id is None:
             print("Error: UAV {} is not assigned to any task".format(uav.id))
         else:
-            self.coalitions[task_id].remove(uav.id)
+            self.task2coalition[task_id].remove(uav.id)
             self.task_obtained_resources[task_id] -= uav.resources
-            self.coalitions[None].append(uav.id)
+            self.task2coalition[None].append(uav.id)
             self.uav2task[uav.id] = None
 
     def get_unassigned_uav_ids(self):
-        return self.coalitions[None]
+        return self.task2coalition[None]
 
     def get_coalition(self, task_id):
-        return self.coalitions[task_id]
+        return self.task2coalition[task_id]
 
     def get_taskid_by_uavid(self, uavid) -> int:
         return self.uav2task[uavid]
 
     def __str__(self):
-        return str(self.coalitions)
+        return str(self.task2coalition)
 
     def plot_coalition(self, ax: plt.Axes, task_id: int, coalition: List[int]):
         text_delta = 0.2  # 文本偏移量
@@ -125,7 +127,7 @@ class CoalitionManager:
         # self.uav_manager.plot(ax, color="blue", marker="o")
 
         # Plot UAVs and their coalitions
-        for task_id, coalition in self.coalitions.items():
+        for task_id, coalition in self.task2coalition.items():
             if task_id is None:
                 continue
             self.plot_coalition(ax, task_id, coalition)
@@ -134,6 +136,21 @@ class CoalitionManager:
         if plot_unassigned:
             unassigned_uavs = [self.uav_manager.get(uav_id) for uav_id in self.get_unassigned_uav_ids()]
             plot_entities_on_axes(ax, unassigned_uavs, color="gray", marker="o")
+
+        # evaluate and add text
+        eval_result = evaluate_assignment(
+            self.uav_manager, self.task_manager, self.task2coalition, self.hyper_params.resources_num
+        )
+
+        ax.text(
+            0.75,
+            0.95,
+            f"Task completion rate: {eval_result.completion_rate:.2f}\nResource use rate: {eval_result.resource_use_rate:.2f}",
+            transform=ax.transAxes,
+            fontsize=12,
+            ha="center",
+            va="center",
+        )
 
         ax.set_xlabel("x")
         ax.set_ylabel("y")

@@ -25,48 +25,53 @@
 </p>
 
 ```python
-resources_num = 2
-map_shape = (20, 20, 0)
-gamma = 0.1
+def run_enumeration(
+    uav_manager: UAVManager,
+    task_manager: TaskManager,
+    hyper_params: HyperParams,
+    result_queue: Queue = None,  # for return result
+):
+    print("Enumeration")
+    enumeration_algorithm = EnumerationAlgorithm(uav_manager, task_manager, hyper_params)
+    start_time = time.time()
+    best_assignment, best_score = enumeration_algorithm.solve()
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    if result_queue is not None:
+        result_queue.put(elapsed_time)
+    print(f"Elapsed Time: {elapsed_time}")
+    print(f"Best Assignment: {best_assignment}")
+    print(f"Best Score: {best_score}")
 
-with open(test_case_path, "r") as f:
-    data = json.load(f)
-
-uav_manager = UAVManager.from_dict(data["uavs"])
-task_manager = TaskManager.from_dict(data["tasks"])
-
-coalition_set = CoalitionSet(uav_manager, task_manager)
-game = CoalitionFormationGame(
-    uav_manager,
-    task_manager,
-    coalition_set,
-    resources_num=resources_num,
-    map_shape=map_shape,
-    gamma=gamma,
-)
-
-# coalition_set.plot_map()
-game.run(debug=False)
-print("Coalition Game Result")
-print(coalition_set)
-coalition_set.plot_map()
+    enu_coalition_set = CoalitionManager(uav_manager, task_manager, assignment=best_assignment)
+    enu_coalition_set.plot_map(".enumeration_result.png")
 
 
-print("Enumeration")
-enumeration_algorithm = EnumerationAlgorithm(
-    uav_manager,
-    task_manager,
-    resources_num=resources_num,
-    map_shape=map_shape,
-    gamma=gamma,
-)
-best_assignment, best_score = enumeration_algorithm.solve()
+def run_coalition_game(
+    uav_manager: UAVManager,
+    task_manager: TaskManager,
+    hyper_params: HyperParams,
+    result_queue: Queue = None,
+):
+    print("Coalition Game")
+    coalition_manager = CoalitionManager(uav_manager, task_manager)
+    game = CoalitionFormationGame(uav_manager, task_manager, coalition_manager, hyper_params=hyper_params)
 
-print(f"Best Assignment: {best_assignment}")
-print(f"Best Score: {best_score}")
+    # coalition_set.plot_map()
+    start_time = time.time()
+    game.run(debug=False)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    if result_queue is not None:
+        result_queue.put(elapsed_time)
+    print(f"Coalition Game Result: {coalition_manager}")
 
-coalition_set = CoalitionSet(uav_manager, task_manager, assignment=best_assignment)
-coalition_set.plot_map()
+    eval_reuslt = evaluate_assignment(
+        uav_manager, task_manager, coalition_manager.task2coalition, hyper_params.resources_num
+    )
+    print(f"Eval Result: {eval_reuslt}")
+    coalition_manager.plot_map(".coalition_game_result.png", plot_unassigned=True)
+
 
 ```
 
@@ -98,21 +103,26 @@ Best Score: 54.851725195536254
 
 ## TODO
 
-- [ ] implement the algorithm in the [paper](https://doi.org/10.1360/ssi-2024-0167).
-  - [ ] add time constraints
+- [x] implement the algorithm in the [paper](https://doi.org/10.1360/ssi-2024-0167).
+  - [x] add time constraints
+  - [ ] uavs and tasks cluster
 - [x] fix bugs in CoalitionFormationGame task assignment algorithm.
-- [ ] Calculate various evaluation indicators, such as:
-  - task completion rate, task execution cost, and resource utilization
+- [x] Calculate various evaluation indicators, such as:
+  - task completion rate, and resource use rate
 
-## Structure
+## Project Structure
 
 - `src/`:
-  - `sim.py`: the main simulation script.
-  - `game.py`: implement `CoalitionFormationGame`.
-  - `task.py`: the class for `Task` and `TaskManager`.
+  - `base.py`: base class for the project.
   - `uav.py`: the class for `UAV` and `UAVManager`.
+  - `task.py`: the class for `Task` and `TaskManager`.
   - `coalition.py`: the class for `CoalitionSet`.
   - `utils.py`: the utility functions.
+  - `task_assign.py`: implement `EnumerationAlgorithm`.
+  - `game.py`: implement `CoalitionFormationGame`.
+  - `sim.py`: the main simulation script.
+  - `gen.py`: generate test data, in json format.
+
 - `tests/`
   - case0.json: 3 uavs, 2 tasks; no coalition.
   - case1.json: 5 uavs, 2 tasks.

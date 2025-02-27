@@ -5,7 +5,13 @@ from coalition import CoalitionManager
 import json
 import subprocess
 from task_assign import EnumerationAlgorithm
-from utils import save_uavs_and_tasks, calc_map_shape
+from utils import (
+    save_uavs_and_tasks,
+    calculate_map_shape,
+    calualte_task_completion_rate,
+    calculate_resource_use_rate,
+    evaluate_assignment,
+)
 
 from multiprocessing import Process, Queue
 import time
@@ -13,9 +19,9 @@ from base import HyperParams
 
 
 def run_enumeration(
-    uav_manager,
-    task_manager,
-    hyper_params,
+    uav_manager: UAVManager,
+    task_manager: TaskManager,
+    hyper_params: HyperParams,
     result_queue: Queue = None,  # for return result
 ):
     print("---")
@@ -31,19 +37,21 @@ def run_enumeration(
     print(f"Best Assignment: {best_assignment}")
     print(f"Best Score: {best_score}")
 
-    enu_coalition_set = CoalitionManager(uav_manager, task_manager, assignment=best_assignment)
+    enu_coalition_set = CoalitionManager(
+        uav_manager, task_manager, assignment=best_assignment, hyper_params=hyper_params
+    )
     enu_coalition_set.plot_map(".enumeration_result.png")
 
 
 def run_coalition_game(
-    uav_manager,
-    task_manager,
-    hyper_params,
+    uav_manager: UAVManager,
+    task_manager: TaskManager,
+    hyper_params: HyperParams,
     result_queue: Queue = None,
 ):
     print("---")
     print("Coalition Game")
-    coalition_manager = CoalitionManager(uav_manager, task_manager)
+    coalition_manager = CoalitionManager(uav_manager, task_manager, hyper_params=hyper_params)
     game = CoalitionFormationGame(uav_manager, task_manager, coalition_manager, hyper_params=hyper_params)
 
     # coalition_set.plot_map()
@@ -54,6 +62,11 @@ def run_coalition_game(
     if result_queue is not None:
         result_queue.put(elapsed_time)
     print(f"Coalition Game Result: {coalition_manager}")
+
+    eval_reuslt = evaluate_assignment(
+        uav_manager, task_manager, coalition_manager.task2coalition, hyper_params.resources_num
+    )
+    print(f"Eval Result: {eval_reuslt}")
     coalition_manager.plot_map(".coalition_game_result.png", plot_unassigned=True)
 
 
@@ -92,7 +105,7 @@ def multi_processes_run(uav_manager, task_manager, hyper_params, timeout=10):
 
 
 def simple_run(uav_manager, task_manager, hyper_params):
-    run_enumeration(uav_manager, task_manager, hyper_params)
+    # run_enumeration(uav_manager, task_manager, hyper_params)
     run_coalition_game(uav_manager, task_manager, hyper_params)
 
 
@@ -106,10 +119,12 @@ def test_coalition(test_case_path="../tests/case1.json"):
 
     hyper_params = HyperParams(
         resources_num=data["resources_num"],
-        map_shape=calc_map_shape(uav_manager, task_manager),
+        map_shape=calculate_map_shape(uav_manager, task_manager),
         alpha=1.0,
         beta=10.0,
-        gamma=0.2,
+        gamma=0.05,
+        mu=-1.0,
+        max_iter=25,
     )
 
     print(hyper_params)

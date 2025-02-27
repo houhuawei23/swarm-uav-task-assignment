@@ -7,7 +7,7 @@ from task import Task, TaskManager
 from coalition import CoalitionManager
 import matplotlib.pyplot as plt
 
-from utils import calc_map_shape
+from utils import calculate_map_shape
 from itertools import product
 from typing import List, Dict
 

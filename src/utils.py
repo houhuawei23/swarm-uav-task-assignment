@@ -10,10 +10,17 @@ from task import Task
 
 from uav import UAVManager
 from task import TaskManager
-from coalition import CoalitionManager
+
+from dataclasses import dataclass, field
 
 
-def calc_map_shape(uav_manager: UAVManager, task_manager: TaskManager):
+@dataclass(repr=True)
+class EvaluationResult:
+    completion_rate: float = 0.0
+    resource_use_rate: float = 0.0
+
+
+def calculate_map_shape(uav_manager: UAVManager, task_manager: TaskManager):
     entities_list = uav_manager.get_all() + task_manager.get_all()
     max_x = max(entity.position.x for entity in entities_list)
     max_y = max(entity.position.y for entity in entities_list)
@@ -21,48 +28,51 @@ def calc_map_shape(uav_manager: UAVManager, task_manager: TaskManager):
     return (max_x + 1, max_y + 1, 0)
 
 
-def calculate_uav_task_benefit(
-    uav: UAV,
-    task: Task,
-    coalition: List[UAV],  # UAVs in the coalition, without the current UAV
-    map_shape,
-    alpha=1.0,
-    beta=1.0,
-    gamma=1.0,
-    debug=False,
-) -> float:
-    """
-    r(ui, tj) = alpha * val(ui, tj) + beta * cost(ui, tj) - gamma * risk(ui, tj)
-    """
-    # 计算资源贡献
-    resources_num = 2
-    # Kj = task.resources_weights
-    satisfied = np.zeros(resources_num)
-    for uav_in_coalition in coalition:
-        satisfied += uav_in_coalition.resources
+def calculate_obtained_resources(collation: List[int], uav_manager: UAVManager, resources_num: int) -> List[float]:
+    obtained_resources = np.zeros(resources_num)
+    for uav_id in collation:
+        uav = uav_manager.get(uav_id)
+        obtained_resources += uav.resources
 
-    I = uav.resources  # only consider uav's own resources
-    # +is required, -is surplus
-    pre_required_resources = task.required_resources - satisfied
-    # +is required, -is surplus
-    now_required_resources = np.maximum(pre_required_resources, 0) - uav.resources
-    # +is surplus, -is required
-    now_not_required_resources = -now_required_resources
+    return obtained_resources
 
-    O = sum(np.maximum(now_not_required_resources, 0))
-    P = 0.5
-    val = calculate_resource_contribution
 
-    # 计算路径成本
-    cost = calculate_path_cost(uav, task, map_shape, val)
+def calualte_task_completion_rate(
+    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int, List[int]], resources_num: int
+):
+    # 计算任务完成率
+    completed_tasks = 0
+    task_list = task_manager.get_all()
+    for task in task_list:
+        obtained = calculate_obtained_resources(task2coalition[task.id], uav_manager, resources_num)
+        if np.all(obtained >= task.required_resources):
+            completed_tasks += 1
 
-    # 计算威胁代价
-    risk = calculate_threat_cost(uav, task)
+    return completed_tasks / len(task_list)
 
-    # 总收益
-    total_benefit = alpha * val + beta * cost - gamma * risk
 
-    return total_benefit
+def calculate_resource_use_rate(
+    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int, List[int]], resources_num: int
+):
+    # 计算资源利用率
+    all_input_resources = np.zeros(resources_num)
+    unused_resources = np.zeros(resources_num)
+    task_list = task_manager.get_all()
+    for task in task_list:
+        obtained = calculate_obtained_resources(task2coalition[task.id], uav_manager, resources_num)
+        all_input_resources += obtained
+        unused_resources += np.maximum(obtained - task.required_resources, 0)
+
+    return (1 - np.sum(unused_resources) / np.sum(all_input_resources)).item()
+
+
+def evaluate_assignment(
+    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int, List[int]], resources_num: int
+) -> EvaluationResult:
+    completion_rate = calualte_task_completion_rate(uav_manager, task_manager, task2coalition, resources_num)
+    resource_use_rate = calculate_resource_use_rate(uav_manager, task_manager, task2coalition, resources_num)
+
+    return EvaluationResult(completion_rate, resource_use_rate)
 
 
 def calculate_resource_contribution(
@@ -85,12 +95,15 @@ def calculate_resource_contribution(
     return max(0, contribution)
 
 
-def calculate_path_cost(uav: UAV, task: Task, map_shape, val, mu=-1.0):
+def calculate_path_cost(uav: UAV, task: Task, resource_contribution: float, map_shape: Tuple, mu: float = -1.0):
     """Calculates the path cost for a UAV to reach a task.
 
     The path cost is computed based on the Euclidean distance between the UAV's current position and
     the task's position. The cost is normalized by the maximum possible distance in the environment.
     If the distance exceeds the maximum distance, the UAV is considered unable to reach the task.
+
+    当 val(ui, tj) <= 0 时, 设计 rui (tj) 小于 0.
+    含义是当无人机 ui 加入任务 tj 联盟无法 贡献资源时, 加入该联盟的收益小于在 ct0 中的收益
 
     Args:
         uav (UAV): The UAV object representing the unmanned aerial vehicle.
@@ -100,7 +113,7 @@ def calculate_path_cost(uav: UAV, task: Task, map_shape, val, mu=-1.0):
         float: The normalized path cost (between 0 and 1) if the task is reachable, otherwise -1.
     """
     # 路径成本计算
-    if val <= 0:
+    if resource_contribution <= 0:
         return mu
 
     # distance = np.linalg.norm(uav.position - task.position)

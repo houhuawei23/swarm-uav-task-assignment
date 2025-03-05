@@ -1,6 +1,8 @@
 import json
 import random
-from utils import format_json
+import argparse
+
+from framework.utils import format_json
 
 
 # 生成 UAV 数据
@@ -56,9 +58,7 @@ def generate_tasks(
         #     ),  # 确保资源需求不超过 UAV 资源总和
         #     random.randint(1, min(10, total_resources[1])),
         # ]
-        required_resources = [
-            random.randint(*resources_range) for _ in range(resources_num)
-        ]
+        required_resources = [random.randint(*resources_range) for _ in range(resources_num)]
         task = {
             "id": i,
             "required_resources": required_resources,
@@ -107,8 +107,6 @@ def generate_data(num_uavs, num_tasks, output_file, params):
         json.dump(data, f, indent=4)
     print(f"Data saved to {output_file}")
 
-
-import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Coalition Formation Game Simulation")

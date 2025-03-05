@@ -1,5 +1,6 @@
-from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Dict
+from dataclasses import dataclass, field
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -105,6 +106,9 @@ class EntityManager:
     def to_dict(self) -> Dict[int, Dict]:
         return [entity.to_dict() for entity in self.entities.values()]
 
+    def size(self) -> int:
+        return len(self.entities)
+
     def __len__(self):
         return len(self.entities)
 
@@ -122,8 +126,9 @@ class HyperParams:
     alpha: float  # 资源贡献权重
     beta: float  # 路径成本权重
     gamma: float  # 威胁权重
-    mu: float # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
+    mu: float  # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
     max_iter: int  # 最大迭代次数
+
 
 if __name__ == "__main__":
     p1 = Point([1, 2, 3])

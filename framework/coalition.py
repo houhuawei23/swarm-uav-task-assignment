@@ -1,11 +1,13 @@
-from uav import UAV, UAVManager
-from task import Task, TaskManager
 from typing import List, Tuple, Dict
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Polygon, Wedge
-from base import plot_entities_on_axes, HyperParams
-from utils import evaluate_assignment
+
+from .base import plot_entities_on_axes, HyperParams
+from .uav import UAV, UAVManager
+from .task import Task, TaskManager
+from .utils import evaluate_assignment
 
 
 class CoalitionManager:
@@ -36,13 +38,19 @@ class CoalitionManager:
 
         # 维护每个任务当前需要的资源向量
         # self.required_resources = {task.id: task.required_resources for task in task_manager}
-        self.task_obtained_resources = {task.id: np.zeros(task.required_resources.shape) for task in task_manager}
+        self.task_obtained_resources = {
+            task.id: np.zeros(task.required_resources.shape) for task in task_manager
+        }
 
     def assign(self, uav: UAV, task: Task):
         """Assigns a UAV to a task, updating the coalitions dictionary."""
         # print(f"Assigning u{uav.id} to t{task.id}")
         if self.uav2task[uav.id] is not None:
-            print("Error: UAV {} has already been assigned to task {}".format(uav.id, self.uav2task[uav.id]))
+            print(
+                "Error: UAV {} has already been assigned to task {}".format(
+                    uav.id, self.uav2task[uav.id]
+                )
+            )
             return
             # self.coalitions[self.uav2task[uav.id]].remove(uav)
         self.task2coalition[task.id].append(uav.id)
@@ -134,12 +142,17 @@ class CoalitionManager:
 
         # Plot unassigned UAVs
         if plot_unassigned:
-            unassigned_uavs = [self.uav_manager.get(uav_id) for uav_id in self.get_unassigned_uav_ids()]
+            unassigned_uavs = [
+                self.uav_manager.get(uav_id) for uav_id in self.get_unassigned_uav_ids()
+            ]
             plot_entities_on_axes(ax, unassigned_uavs, color="gray", marker="o")
 
         # evaluate and add text
         eval_result = evaluate_assignment(
-            self.uav_manager, self.task_manager, self.task2coalition, self.hyper_params.resources_num
+            self.uav_manager,
+            self.task_manager,
+            self.task2coalition,
+            self.hyper_params.resources_num,
         )
 
         ax.text(

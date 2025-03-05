@@ -1,26 +1,96 @@
 from typing import List, Tuple, Dict
-import numpy as np
-import matplotlib.pyplot as plt
+from dataclasses import dataclass, field
 
+import random
+import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from uav import UAV, UAVManager
-from task import Task, TaskManager, get_resources_weights
-from coalition import CoalitionManager
-from utils import (
-    calculate_path_cost,
-    calculate_resource_contribution,
-    calculate_threat_cost,
-    calculate_obtained_resources,
-)
-from base import HyperParams
-from dataclasses import dataclass, field
+# from game import CoalitionFormationGame
+# from uav import UAV, UAVManager
+# from task import Task, TaskManager, get_resources_weights
+# from coalition import CoalitionManager
+# from utils import calculate_obtained_resources
+# from base import HyperParams
+from framework import *
+from framework.utils import calculate_obtained_resources, get_resources_weights
 
 np.set_printoptions(precision=2)
 
 
+def calculate_resource_contribution(
+    Kj: np.ndarray,
+    I: np.ndarray,
+    O: float,
+    P: float,
+):
+    """
+    Returns:
+        float: The resource contribution value.
+
+    val(ui, tj) = K[j, :] · I - P · O
+        K: (m, l) 权重矩阵, P: 常数权值, 对未利用资源的惩罚系数
+        K[j, :] = [k1, k2, ..., kl]: 第 j 个任务的资源权重向量, K[j, k] 表示第 k 个资源的权重
+        I = [i1, i2, ..., il]: 无人机加入任务对应的联盟集合中可利用的每类资源的数目, 取决于任务本身与联盟内其他成员?
+        O: 该无人机未利用的总资源数目, 即加入该联盟后冗余资源总数目
+    """
+    contribution = np.dot(Kj, I) - P * O
+    return max(0, contribution)
+
+
+def calculate_path_cost(
+    uav: UAV, task: Task, resource_contribution: float, map_shape: Tuple, mu: float = -1.0
+):
+    """Calculates the path cost for a UAV to reach a task.
+
+    The path cost is computed based on the Euclidean distance between the UAV's current position and
+    the task's position. The cost is normalized by the maximum possible distance in the environment.
+    If the distance exceeds the maximum distance, the UAV is considered unable to reach the task.
+
+    当 val(ui, tj) <= 0 时, 设计 rui (tj) 小于 0.
+    含义是当无人机 ui 加入任务 tj 联盟无法 贡献资源时, 加入该联盟的收益小于在 ct0 中的收益
+
+    Args:
+        uav (UAV): The UAV object representing the unmanned aerial vehicle.
+        task (Task): The task object representing the task to be completed.
+
+    Returns:
+        float: The normalized path cost (between 0 and 1) if the task is reachable, otherwise -1.
+    """
+    # 路径成本计算
+    if resource_contribution <= 0:
+        return mu
+
+    # distance = np.linalg.norm(uav.position - task.position)
+    distance = uav.position.distance_to(task.position)
+    # max_distance = np.sqrt(100**2 + 100**2)  # 假设最大距离
+    max_distance = np.linalg.norm(map_shape)  # 任务环境区域大小
+
+    return 1 - distance / max_distance
+
+
+def calculate_threat_cost(uav: UAV, task: Task):
+    """Calculates the threat cost for a UAV assigned to a task.
+
+    The threat cost is computed as the product of the UAV's intrinsic value and the task's threat index.
+    This represents the risk or potential loss associated with assigning the UAV to the task.
+
+    Args:
+        uav (UAV): The UAV object representing the unmanned aerial vehicle.
+        task (Task): The task object representing the task to be completed.
+
+    Returns:
+        float: The threat cost value.
+    """
+    # 威胁代价计算
+    return uav.value * task.threat
+
+
 def cal_resource_contribution(
-    uav: UAV, task: Task, task_collation: List[int], task_obtained_resources: List[float], debug=False
+    uav: UAV,
+    task: Task,
+    task_collation: List[int],
+    task_obtained_resources: List[float],
+    debug=False,
 ) -> float:
     """Calculates the resource contribution of a UAV to a task.
 
@@ -42,11 +112,15 @@ def cal_resource_contribution(
         task_obtained_resources_copy -= uav.resources
 
     now_required_resources = task.required_resources - task_obtained_resources_copy
-    surplus_resources_sum_of_uav = sum(np.maximum(uav.resources - np.maximum(now_required_resources, 0), 0))
+    surplus_resources_sum_of_uav = sum(
+        np.maximum(uav.resources - np.maximum(now_required_resources, 0), 0)
+    )
     if debug:
         print(f"abtained_resources: {task_obtained_resources_copy}")
 
-    Kj = get_resources_weights(task.required_resources, task_obtained_resources_copy)  # 表征 task 对资源的偏好
+    Kj = get_resources_weights(
+        task.required_resources, task_obtained_resources_copy
+    )  # 表征 task 对资源的偏好
     I = uav.resources  # only consider uav's own resources
     O = surplus_resources_sum_of_uav
     P = 0.5
@@ -84,14 +158,20 @@ def cal_uav_task_benefit(
     if debug:
         print(f"cal_uav_task_benefit(uav=u{uav.id}, task=t{task.id})")
     # 计算资源贡献
-    resource_contribution = cal_resource_contribution(uav, task, task_collation, task_obtained_resources, debug)
+    resource_contribution = cal_resource_contribution(
+        uav, task, task_collation, task_obtained_resources, debug
+    )
     # 计算路径成本
-    path_cost = calculate_path_cost(uav, task, resource_contribution, hyper_params.map_shape, hyper_params.mu)
+    path_cost = calculate_path_cost(
+        uav, task, resource_contribution, hyper_params.map_shape, hyper_params.mu
+    )
     # 计算威胁代价
     threat_cost = calculate_threat_cost(uav, task)
     # 总收益
     total_benefit = (
-        hyper_params.alpha * resource_contribution + hyper_params.beta * path_cost - hyper_params.gamma * threat_cost
+        hyper_params.alpha * resource_contribution
+        + hyper_params.beta * path_cost
+        - hyper_params.gamma * threat_cost
     )
     # check time window
     min_uav_fly_time = uav.position.distance_to(task.position) / uav.max_speed
@@ -107,7 +187,11 @@ def cal_uav_task_benefit(
 
 
 def cal_task_on_given_coalition_benefit(
-    task: Task, given_coalition: List[int], uav_manager: UAVManager, hyper_params: HyperParams, debug=False
+    task: Task,
+    given_coalition: List[int],
+    uav_manager: UAVManager,
+    hyper_params: HyperParams,
+    debug=False,
 ) -> float:
     """
     the benefit of a coalition for task = sum of the benefit of each UAV in the coalition.
@@ -118,7 +202,9 @@ def cal_task_on_given_coalition_benefit(
     utility = 0.0
     for uav_id in given_coalition:  # ??? coalition=[u1, u2] on t2, 效用不应该简单叠加吧！！
         uav = uav_manager.get(uav_id)
-        obtained_resources = calculate_obtained_resources(given_coalition, uav_manager, hyper_params.resources_num)
+        obtained_resources = calculate_obtained_resources(
+            given_coalition, uav_manager, hyper_params.resources_num
+        )
 
         benefit = cal_uav_task_benefit(uav, task, given_coalition, obtained_resources, hyper_params)
         utility += benefit
@@ -129,7 +215,7 @@ def cal_task_on_given_coalition_benefit(
 
 
 @dataclass
-class CoalitionFormationGame:
+class ChinaScience2024_CoalitionFormationGame(CoalitionFormationGame):
     """Represents a coalition formation game where UAVs are assigned to tasks based on benefits.
 
     The game involves forming coalitions of UAVs for each task, considering factors such as resource contribution,
@@ -153,24 +239,11 @@ class CoalitionFormationGame:
         (1) 速度约束;
         (2) 任务时效性约束;
         (3) 无人机执行任务模式约束: 同一时间只允许一个无人机执行一个任务。
-
-
-    Attributes:
-        uavs (list): A list of UAV objects available for task assignment.
-        tasks (list): A list of Task objects that need to be completed.
-        alpha (float): Weight for resource contribution in the benefit calculation.
-        beta (float): Weight for path cost in the benefit calculation.
-        gamma (float): Weight for threat in the benefit calculation.
-        coalitions (dict): A dictionary mapping task IDs to lists of UAVs assigned to them. The key `None` represents
-                           UAVs that are not assigned to any task.
     """
 
-    uav_manager: UAVManager
-    task_manager: TaskManager
-    coalition_manager: CoalitionManager
-    hyper_params: HyperParams
-
-    def cal_benefit_matrix(self, unassigned_uav_ids: List[int], task_ids: List[int], debug=False) -> np.ndarray:
+    def cal_benefit_matrix(
+        self, unassigned_uav_ids: List[int], task_ids: List[int], debug=False
+    ) -> np.ndarray:
         """Calculates the benefit matrix for UAVs and tasks.
         计算每个无人机对每个任务的收益矩阵
 
@@ -194,21 +267,35 @@ class CoalitionFormationGame:
                     coalition, self.uav_manager, self.hyper_params.resources_num
                 )
 
-                benefit_matrix[i, j] = cal_uav_task_benefit(uav, task, coalition, obtained_resources, self.hyper_params)
+                benefit_matrix[i, j] = cal_uav_task_benefit(
+                    uav, task, coalition, obtained_resources, self.hyper_params
+                )
         # debug = True
         if debug:
             print("Benefit Matrix:")
             print(benefit_matrix)
         return benefit_matrix
 
-    def cal_uav_utility_on_colition(self, uav: UAV, task: Task, coalition: List[int], debug=False) -> float:
+    def cal_uav_utility_in_colition(
+        self, uav: UAV, task: Task, coalition: List[int], debug=False
+    ) -> float:
+        """
+        calcualte utility of uav in coalition of task, dont change anything.
+        if uav in coalition of task, utility = u_have - u_not_have
+        if uav not in coalition of task, utility = u_have - u_not_have (will add uav to coalition to calculate)
+        """
+
         coalition_copy = coalition.copy()
         if uav.id in coalition:  # uav already in coalition
             coalition_copy.remove(uav.id)
 
-        u_not_have = cal_task_on_given_coalition_benefit(task, coalition_copy, self.uav_manager, self.hyper_params)
+        u_not_have = cal_task_on_given_coalition_benefit(
+            task, coalition_copy, self.uav_manager, self.hyper_params
+        )
         coalition_copy.append(uav.id)
-        u_have = cal_task_on_given_coalition_benefit(task, coalition_copy, self.uav_manager, self.hyper_params)
+        u_have = cal_task_on_given_coalition_benefit(
+            task, coalition_copy, self.uav_manager, self.hyper_params
+        )
         utility = u_have - u_not_have
         return utility
 
@@ -219,7 +306,10 @@ class CoalitionFormationGame:
         total_utility = 0.0
         for task in self.task_manager:
             total_utility += cal_task_on_given_coalition_benefit(
-                task, self.coalition_manager.get_coalition(task.id), self.uav_manager, self.hyper_params
+                task,
+                self.coalition_manager.get_coalition(task.id),
+                self.uav_manager,
+                self.hyper_params,
             )
         if debug:
             print(f"Total Utility: {total_utility:.2f}")
@@ -282,7 +372,9 @@ class CoalitionFormationGame:
             for uav_id in self.coalition_manager.get_coalition(taski.id):
                 uav = self.uav_manager.get(uav_id)
                 taski_coalition = self.coalition_manager.get_coalition(taski.id)
-                cur_utility = self.cal_uav_utility_on_colition(uav, taski, taski_coalition.copy(), debug=debug)
+                cur_utility = self.cal_uav_utility_in_colition(
+                    uav, taski, taski_coalition.copy(), debug=debug
+                )
 
                 if debug:
                     print(f"Cur utility: u{uav.id}-t{taski.id}={cur_utility}")
@@ -291,7 +383,7 @@ class CoalitionFormationGame:
                     if taskj.id != taski.id:
                         taskj_coalition = self.coalition_manager.get_coalition(taskj.id)
 
-                        move_to_taskj_utility = self.cal_uav_utility_on_colition(
+                        move_to_taskj_utility = self.cal_uav_utility_in_colition(
                             uav, taskj, taskj_coalition.copy(), debug=debug
                         )
 
@@ -304,7 +396,7 @@ class CoalitionFormationGame:
 
         return stable
 
-    def run(self, debug=False):
+    def run_allocate(self, debug=False):
         """Runs the coalition formation game until a stable assignment is achieved.
 
         This function repeatedly matches UAVs to tasks and checks for stability until no further
@@ -343,6 +435,9 @@ class CoalitionFormationGame:
             print(benefit_matrix)
             # 3. matching based on maximum weighed principle (based on benefit matrix)
             if not self.match_tasks(benefit_matrix, unassigned_uav_ids, task_ids, debug=debug):
+                # TODO: 问题，根据收益矩阵为每个任务选择使得总最大的无人机；
+                # 问题是如果所有无人机对某任务的收益都小于 0, 按理来说不应该给该任务分配任何的无人机
+                # 此处算法实现是否会导致给该任务分配一个收益 < 0 的无人机？
                 print("No more UAVs can be assigned to tasks. Over, break.")
                 break
 
@@ -354,63 +449,3 @@ class CoalitionFormationGame:
                 # print(f"Cur coalition set: {self.coalition_manager}")
 
         return self.coalition_manager
-
-
-def test_calculate_resource_contribution():
-    # 示例权重矩阵和资源数据
-    weight_matrix = np.array([[0.5, 0.3, 0.2], [0.4, 0.4, 0.2]])
-    constant_P = 0.1
-
-    # 示例数据
-    task_index = 0
-    resource_vector = np.array([10, 20, 30])  # 可用资源数目 i_1, i_2, ..., i_l
-    unused_resources = 5  # 未利用资源总数目
-    val = calculate_resource_contribution(weight_matrix[task_index], resource_vector, unused_resources, constant_P)
-    print(f"Resource contribution: {val}")
-
-
-def test_game():
-    resources_num = 2
-    map_shape = [10, 10, 0]
-    gamma = 0.1
-
-    uav1 = UAV(id=1, resources=[5, 3], position=[0, 0, 0], value=1, max_speed=10)
-    uav2 = UAV(id=2, resources=[3, 4], position=[10, 10, 0], value=1, max_speed=10)
-    uav3 = UAV(id=3, resources=[2, 5], position=[20, 20, 0], value=1, max_speed=10)
-    uavs = [uav1, uav2, uav3]
-    uav_manager = UAVManager(uavs)
-    task1 = Task(1, [4, 2], [5, 5, 0], [0, 100], 0.5)
-    task2 = Task(2, [3, 3], [15, 15, 0], [0, 100], 0.5)
-    tasks = [task1, task2]
-    # tasks = [task1]
-    task_manager = TaskManager(tasks)
-
-    coalition_manager = CoalitionManager(uav_manager, task_manager)
-    game = CoalitionFormationGame(
-        uav_manager,
-        task_manager,
-        coalition_manager,
-        resources_num=resources_num,
-        map_shape=map_shape,
-        gamma=gamma,
-    )
-
-    val = cal_resource_contribution(coalition_manager, uav1, task1)
-    # cost = game.cal_path_cost(uav1, task1, val)
-    # threat = game.cal_threat_cost(uav1, task1)
-    # benefit = game.cal_uav_task_benefit(uav1, task1)
-    print(f"{uav1}")
-    print(f"{task1}")
-    print(f"Resource contribution: {val: .2f}")
-    # print(f"Path cost: {cost: .2f}")
-    # print(f"Threat cost: {threat: .2f}")
-    # print(f"Benefit: {benefit: .2f}")
-
-    coalition_manager.plot_map()
-    game.run(debug=True)
-    coalition_manager.plot_map()
-
-
-if __name__ == "__main__":
-    # test_calculate_resource_contribution()
-    test_game()

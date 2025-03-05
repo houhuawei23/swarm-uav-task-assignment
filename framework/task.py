@@ -1,17 +1,14 @@
-import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Dict
 from dataclasses import dataclass, field
-from base import Point, Entity, EntityManager
+
+import random
+import numpy as np
 
 
-def get_resources_weights(required_resources, task_obtained_resources):
-    still_required_resources = required_resources - task_obtained_resources
-    still_required_resources_pos = np.maximum(still_required_resources, 0)  # 将负值置为0
-    if np.sum(still_required_resources_pos) == 0:
-        return np.zeros_like(still_required_resources_pos)
-    else:
-        resources_weights = still_required_resources_pos / np.sum(still_required_resources_pos)
-        return resources_weights
+from .base import Point, Entity, EntityManager
+
+
+default_execution_time = 2
 
 
 @dataclass(init=True, repr=True)
@@ -32,6 +29,7 @@ class Task(Entity):
     time_window: List  # 时间窗口 [min_start, max_start]
     threat: float  # 威胁指数
 
+    execution_time: int = field(default=default_execution_time)  # 任务执行时间
     resources_nums: int = field(default=0, init=False)  # 资源数量
 
     def __post_init__(self):
@@ -46,26 +44,34 @@ class Task(Entity):
             "position": self.position.tolist(),
             "time_windbeow": self.time_window,
             "threat": self.threat,
+            "execution_time": self.execution_time,
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data: Dict):
         return cls(
             id=data["id"],
             required_resources=data["required_resources"],
             position=data["position"],
             time_window=data["time_window"],
             threat=data["threat"],
+            execution_time=data["execution_time"]
+            if data.get("execution_time") is not None
+            else random.uniform(1, 3),
         )
 
     def brief_info(self) -> str:
-        return f"T_{self.id}(req={self.required_resources}, tw={self.time_window}, thr={self.threat})"
+        return (
+            f"T_{self.id}(req={self.required_resources}, tw={self.time_window}, thr={self.threat})"
+        )
 
 
 @dataclass
 class TaskManager(EntityManager):
     def __init__(self, tasks: List[Task] = []):
         super().__init__(tasks)
+        self.max_execution_time = max(task.execution_time for task in tasks)
+        self.min_execution_time = min(task.execution_time for task in tasks)
 
     def get(self, id) -> Task:
         return super().get(id)

@@ -1,18 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Tuple, Any
-import numpy as np
-import itertools
-from uav import UAV, UAVManager
-from task import Task, TaskManager
-from coalition import CoalitionManager
-import matplotlib.pyplot as plt
-
-from utils import calculate_map_shape
-from itertools import product
-from typing import List, Dict
-
-from base import HyperParams
+from typing import List, Dict, Tuple
 from dataclasses import dataclass, field
+import numpy as np
+
+
+from framework import *
 
 
 def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Dict[int, List[int]]]:
@@ -32,7 +24,9 @@ def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Di
         if uav_index == len(uav_ids):
             # 所有无人机都已处理，将当前分配方案添加到结果中
             # 使用固定的任务 ID 顺序来确保格式一致
-            sorted_assignment = {task_id: sorted(current_assignment.get(task_id, [])) for task_id in task_ids}
+            sorted_assignment = {
+                task_id: sorted(current_assignment.get(task_id, [])) for task_id in task_ids
+            }
             if sorted_assignment not in assignments:
                 assignments.append(sorted_assignment)
             return
@@ -86,7 +80,10 @@ class TaskAssignmentAlgorithm(ABC):
 
 
 def calcualte_assignment_score(
-    assignment: Dict[int, List[int]], uav_manager: UAVManager, task_manager: TaskManager, hyper_params: HyperParams
+    assignment: Dict[int, List[int]],
+    uav_manager: UAVManager,
+    task_manager: TaskManager,
+    hyper_params: HyperParams,
 ):
     score = 0
     for task_id, uav_ids in assignment.items():
@@ -136,7 +133,9 @@ class EnumerationAlgorithm(TaskAssignmentAlgorithm):
         #     print(assignment)
         for assignment in all_assignments:
             # print(assignment)
-            score = calcualte_assignment_score(assignment, self.uav_manager, self.task_manager, self.hyper_params)
+            score = calcualte_assignment_score(
+                assignment, self.uav_manager, self.task_manager, self.hyper_params
+            )
             # print(f"score: {score}")
             if score > best_score:
                 best_score = score

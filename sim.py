@@ -1,21 +1,22 @@
-from uav import UAV, UAVManager
-from task import Task, TaskManager
-from game import CoalitionFormationGame
-from coalition import CoalitionManager
+import time
 import json
-import subprocess
-from task_assign import EnumerationAlgorithm
-from utils import (
-    save_uavs_and_tasks,
-    calculate_map_shape,
-    calualte_task_completion_rate,
-    calculate_resource_use_rate,
-    evaluate_assignment,
+from multiprocessing import Process, Queue
+
+
+from framework import (
+    UAVManager,
+    TaskManager,
+    HyperParams,
+    CoalitionManager,
 )
 
-from multiprocessing import Process, Queue
-import time
-from base import HyperParams
+from framework.utils import *
+
+from solvers import (
+    EnumerationAlgorithm,
+    IROS2024_CoalitionFormationGame,
+    ChinaScience2024_CoalitionFormationGame,
+)
 
 
 def run_enumeration(
@@ -43,6 +44,35 @@ def run_enumeration(
     enu_coalition_set.plot_map(".enumeration_result.png")
 
 
+def run_iros_coalition_game(
+    uav_manager: UAVManager,
+    task_manager: TaskManager,
+    hyper_params: HyperParams,
+    result_queue: Queue = None,
+):
+    print("---")
+    print("Coalition Game")
+    coalition_manager = CoalitionManager(uav_manager, task_manager, hyper_params=hyper_params)
+    game = IROS2024_CoalitionFormationGame(
+        uav_manager, task_manager, coalition_manager, hyper_params=hyper_params
+    )
+
+    # coalition_set.plot_map()
+    start_time = time.time()
+    game.run_allocate(debug=False)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    if result_queue is not None:
+        result_queue.put(elapsed_time)
+    print(f"Coalition Game Result: {coalition_manager}")
+
+    eval_reuslt = evaluate_assignment(
+        uav_manager, task_manager, coalition_manager.task2coalition, hyper_params.resources_num
+    )
+    print(f"Eval Result: {eval_reuslt}")
+    coalition_manager.plot_map(".coalition_game_result.png", plot_unassigned=True)
+
+
 def run_coalition_game(
     uav_manager: UAVManager,
     task_manager: TaskManager,
@@ -52,11 +82,13 @@ def run_coalition_game(
     print("---")
     print("Coalition Game")
     coalition_manager = CoalitionManager(uav_manager, task_manager, hyper_params=hyper_params)
-    game = CoalitionFormationGame(uav_manager, task_manager, coalition_manager, hyper_params=hyper_params)
+    game = ChinaScience2024_CoalitionFormationGame(
+        uav_manager, task_manager, coalition_manager, hyper_params=hyper_params
+    )
 
     # coalition_set.plot_map()
     start_time = time.time()
-    game.run(debug=False)
+    game.run_allocate(debug=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
     if result_queue is not None:
@@ -106,7 +138,8 @@ def multi_processes_run(uav_manager, task_manager, hyper_params, timeout=10):
 
 def simple_run(uav_manager, task_manager, hyper_params):
     # run_enumeration(uav_manager, task_manager, hyper_params)
-    run_coalition_game(uav_manager, task_manager, hyper_params)
+    # run_coalition_game(uav_manager, task_manager, hyper_params)
+    run_iros_coalition_game(uav_manager, task_manager, hyper_params)
 
 
 def test_coalition(test_case_path="../tests/case1.json"):

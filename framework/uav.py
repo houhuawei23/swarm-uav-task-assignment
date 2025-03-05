@@ -1,7 +1,10 @@
-import numpy as np
-from typing import List
+from typing import List, Dict
 from dataclasses import dataclass, field
-from base import Point, Entity, EntityManager
+
+import random
+import numpy as np
+
+from .base import Point, Entity, EntityManager
 
 
 @dataclass(init=True, repr=True)
@@ -22,6 +25,10 @@ class UAV(Entity):
     value: float  # 无人机价值
     max_speed: float  # 最大速度
 
+    weight: float = field(default=1.0)  # 无人机重量
+    fly_energy_per_time: float = field(default=2)  # 飞行能耗 per time, per weight
+    hover_energy_per_time: float = field(default=2)  # 悬停能耗 per time, per weight
+
     def __post_init__(self):
         super().__post_init__()
         self.resources = np.array(self.resources)
@@ -33,21 +40,41 @@ class UAV(Entity):
             "position": self.position.tolist(),
             "value": self.value,
             "max_speed": self.max_speed,
+            "weight": self.weight,
+            "fly_energy_per_time": self.fly_energy_per_time,
+            "hover_energy_per_time": self.hover_energy_per_time,
         }
 
     @classmethod
     # 从字典中创建一个对象
-    def from_dict(cls, data):
+    def from_dict(cls, data: Dict):
         return cls(
             id=data["id"],
             resources=data["resources"],
             position=data["position"],
             value=data["value"],
             max_speed=data["max_speed"],
+            weight=data["weight"] if data.get("weight") is not None else 1.0,
+            fly_energy_per_time=data["fly_energy_per_time"]
+            if data.get("fly_energy_per_time") is not None
+            else random.uniform(1, 3),
+            hover_energy_per_time=data["hover_energy_per_time"]
+            if data.get("hover_energy_per_time") is not None
+            else random.uniform(1, 3),
         )
 
     def brief_info(self) -> str:
         return f"U_{self.id}(re={self.resources}, val={self.value}, spd={self.max_speed})"
+
+    def cal_fly_energy(self, target_pos: Point) -> float:
+        return (
+            self.weight
+            * (self.position.distance_to(target_pos) / self.max_speed)
+            * self.fly_energy_per_time
+        )
+
+    def cal_hover_energy(self, hover_time: float) -> float:
+        return self.weight * hover_time * self.hover_energy_per_time
 
 
 @dataclass

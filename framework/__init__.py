@@ -2,7 +2,7 @@ from .base import HyperParams
 from .uav import UAV, UAVManager
 from .task import Task, TaskManager
 from .coalition import CoalitionManager
-from .game import CoalitionFormationGame
+from .mrta_solver import MRTASolver
 
 __all__ = [
     "HyperParams",
@@ -11,5 +11,5 @@ __all__ = [
     "Task",
     "TaskManager",
     "CoalitionManager",
-    "CoalitionFormationGame",
+    "MRTASolver",
 ]

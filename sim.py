@@ -1,6 +1,8 @@
 import time
 import json
 from multiprocessing import Process, Queue
+import argparse
+from dataclasses import dataclass, field
 
 
 from framework import (
@@ -19,106 +21,77 @@ from solvers import (
 )
 
 
-def run_enumeration(
+@dataclass
+class CmdArgs:
+    test_case_path: str
+    output_path: str
+    choice: str
+    timeout: float = field(default=10)
+
+
+def run_solver(
     uav_manager: UAVManager,
     task_manager: TaskManager,
     hyper_params: HyperParams,
-    result_queue: Queue = None,  # for return result
-):
-    print("---")
-    print("Enumeration")
-    enumeration_algorithm = EnumerationAlgorithm(uav_manager, task_manager, hyper_params)
-    start_time = time.time()
-    best_assignment, best_score = enumeration_algorithm.solve()
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    if result_queue is not None:
-        result_queue.put(elapsed_time)
-    print(f"Elapsed Time: {elapsed_time}")
-    print(f"Best Assignment: {best_assignment}")
-    print(f"Best Score: {best_score}")
-
-    enu_coalition_set = CoalitionManager(
-        uav_manager, task_manager, assignment=best_assignment, hyper_params=hyper_params
-    )
-    enu_coalition_set.plot_map(".enumeration_result.png")
-
-
-def run_iros_coalition_game(
-    uav_manager: UAVManager,
-    task_manager: TaskManager,
-    hyper_params: HyperParams,
+    cmd_args: CmdArgs,
     result_queue: Queue = None,
 ):
     print("---")
-    print("Coalition Game")
     coalition_manager = CoalitionManager(uav_manager, task_manager, hyper_params=hyper_params)
-    game = IROS2024_CoalitionFormationGame(
-        uav_manager, task_manager, coalition_manager, hyper_params=hyper_params
-    )
+    if cmd_args.choice == "iros":
+        solver = IROS2024_CoalitionFormationGame(
+            uav_manager, task_manager, coalition_manager, hyper_params=hyper_params
+        )
+    elif cmd_args.choice == "csci":
+        solver = ChinaScience2024_CoalitionFormationGame(
+            uav_manager, task_manager, coalition_manager, hyper_params=hyper_params
+        )
+    elif cmd_args.choice == "enum":
+        solver = EnumerationAlgorithm(uav_manager, task_manager, coalition_manager, hyper_params)
+    else:
+        raise ValueError("Invalid choice")
 
     # coalition_set.plot_map()
     start_time = time.time()
-    game.run_allocate(debug=False)
+    solver.run_allocate(debug=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
+
     if result_queue is not None:
         result_queue.put(elapsed_time)
-    print(f"Coalition Game Result: {coalition_manager}")
+
+    print(f"{cmd_args.choice} Result: {coalition_manager}")
 
     eval_reuslt = evaluate_assignment(
         uav_manager, task_manager, coalition_manager.task2coalition, hyper_params.resources_num
     )
     print(f"Eval Result: {eval_reuslt}")
-    coalition_manager.plot_map(".coalition_game_result.png", plot_unassigned=True)
+    coalition_manager.plot_map(cmd_args.output_path, plot_unassigned=True)
 
 
-def run_coalition_game(
-    uav_manager: UAVManager,
-    task_manager: TaskManager,
-    hyper_params: HyperParams,
-    result_queue: Queue = None,
-):
-    print("---")
-    print("Coalition Game")
-    coalition_manager = CoalitionManager(uav_manager, task_manager, hyper_params=hyper_params)
-    game = ChinaScience2024_CoalitionFormationGame(
-        uav_manager, task_manager, coalition_manager, hyper_params=hyper_params
-    )
-
-    # coalition_set.plot_map()
-    start_time = time.time()
-    game.run_allocate(debug=False)
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    if result_queue is not None:
-        result_queue.put(elapsed_time)
-    print(f"Coalition Game Result: {coalition_manager}")
-
-    eval_reuslt = evaluate_assignment(
-        uav_manager, task_manager, coalition_manager.task2coalition, hyper_params.resources_num
-    )
-    print(f"Eval Result: {eval_reuslt}")
-    coalition_manager.plot_map(".coalition_game_result.png", plot_unassigned=True)
+def simple_run(uav_manager, task_manager, hyper_params, cmd_args: CmdArgs):
+    # run_enumeration(uav_manager, task_manager, hyper_params)
+    # run_coalition_game(uav_manager, task_manager, hyper_params)
+    run_solver(uav_manager, task_manager, hyper_params, cmd_args)
 
 
-def multi_processes_run(uav_manager, task_manager, hyper_params, timeout=10):
+def multi_processes_run(uav_manager, task_manager, hyper_params: HyperParams, cmd_args: CmdArgs):
     q1 = Queue()  # 创建队列用于传递返回值
     q2 = Queue()
     # 启动两个进程
     p1 = Process(
-        target=run_enumeration,
-        args=(uav_manager, task_manager, hyper_params, q1),
+        target=run_solver,
+        args=(uav_manager, task_manager, hyper_params, cmd_args, q1),
     )
     p2 = Process(
-        target=run_coalition_game,
-        args=(uav_manager, task_manager, hyper_params, q2),
+        target=run_solver,
+        args=(uav_manager, task_manager, hyper_params, cmd_args, q2),
     )
 
     p1.start()
     p2.start()
-    p1.join(timeout=timeout)  # in seconds
-    p2.join(timeout=timeout)
+    p1.join(timeout=cmd_args.timeout)  # in seconds
+    p2.join(timeout=cmd_args.timeout)
     if p1.is_alive():
         print("Enumeration process did not finish in time. Terminating...")
         p1.terminate()
@@ -136,15 +109,36 @@ def multi_processes_run(uav_manager, task_manager, hyper_params, timeout=10):
         print(f"Coalition Game Elapsed Time: {elapsed_time}")
 
 
-def simple_run(uav_manager, task_manager, hyper_params):
-    # run_enumeration(uav_manager, task_manager, hyper_params)
-    # run_coalition_game(uav_manager, task_manager, hyper_params)
-    run_iros_coalition_game(uav_manager, task_manager, hyper_params)
+def main():
+    parser = argparse.ArgumentParser(description="Coalition Formation Game Simulation")
+    # test_case
+    parser.add_argument(
+        "--test_case",
+        type=str,
+        default="../tests/case1.json",
+        help="path to the test case file",
+    )
+    parser.add_argument(
+        "--choice",
+        type=str,
+        default="csci",
+        help="choice of algorithm: enum, iros, csci",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="./.images/.result.png",
+        help="path to the output file",
+    )
 
+    # parse args
+    args = parser.parse_args()
+    cmd_args = CmdArgs(test_case_path=args.test_case, output_path=args.output, choice=args.choice)
+    print(
+        f"Using test case: {cmd_args.test_case_path}, output path: {cmd_args.output_path}, choice: {cmd_args.choice}"
+    )
 
-def test_coalition(test_case_path="../tests/case1.json"):
-    # 加载 无人机 任务
-    with open(test_case_path, "r") as f:
+    with open(cmd_args.test_case_path, "r") as f:
         data = json.load(f)
 
     uav_manager = UAVManager.from_dict(data["uavs"])
@@ -167,33 +161,10 @@ def test_coalition(test_case_path="../tests/case1.json"):
 
     # 将字典转换为 JSON 并保存到文件
     # save_uavs_and_tasks(uav_manager, task_manager, test_data_path)
-    timeout = 10
-    # multi_processes_run(
-    #     uav_manager,
-    #     task_manager,
-    #     hyper_params,
-    #     timeout=timeout,
-    # )
-    simple_run(uav_manager, task_manager, hyper_params)
-
-
-import argparse
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Coalition Formation Game Simulation")
-    # test_case
-    parser.add_argument(
-        "--test_case",
-        type=str,
-        default="../tests/case1.json",
-        help="path to the test case file",
-    )
-    # parse args
-    args = parser.parse_args()
-    test_case_path = args.test_case
-    print(f"Using test case: {test_case_path}")
-    test_coalition(test_case_path)
+    # timeout = 10
+    # multi_processes_run(uav_manager, task_manager, hyper_params, timeout=timeout)
+    # simple_run(uav_manager, task_manager, hyper_params)
+    run_solver(uav_manager, task_manager, hyper_params, cmd_args)
 
 
 # 示例使用

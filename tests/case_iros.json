@@ -1,0 +1,549 @@
+{
+  "resources_num": 5,
+  "num_uavs": 50,
+  "num_tasks": 5,
+  "uavs": [
+    {
+      "id": 1,
+      "resources": [10, 10, 9, 9, 6],
+      "position": [797.19, 847.92, 0.0],
+      "value": 26,
+      "max_speed": 24,
+      "mass": 14,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 2,
+      "resources": [6, 7, 5, 6, 5],
+      "position": [190.38, 448.78, 0.0],
+      "value": 30,
+      "max_speed": 21,
+      "mass": 12,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 3,
+      "resources": [7, 9, 6, 6, 8],
+      "position": [303.36, 863.3, 0.0],
+      "value": 45,
+      "max_speed": 26,
+      "mass": 13,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 4,
+      "resources": [9, 10, 6, 8, 6],
+      "position": [462.49, 502.79, 0.0],
+      "value": 33,
+      "max_speed": 26,
+      "mass": 13,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 5,
+      "resources": [9, 5, 7, 5, 10],
+      "position": [711.96, 178.91, 0.0],
+      "value": 32,
+      "max_speed": 23,
+      "mass": 13,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 6,
+      "resources": [9, 10, 8, 9, 9],
+      "position": [190.73, 882.15, 0.0],
+      "value": 46,
+      "max_speed": 21,
+      "mass": 15,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 7,
+      "resources": [9, 10, 6, 6, 8],
+      "position": [573.32, 105.77, 0.0],
+      "value": 49,
+      "max_speed": 22,
+      "mass": 15,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 8,
+      "resources": [5, 9, 7, 5, 5],
+      "position": [827.29, 259.46, 0.0],
+      "value": 36,
+      "max_speed": 20,
+      "mass": 13,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 9,
+      "resources": [7, 10, 9, 6, 5],
+      "position": [491.18, 698.64, 0.0],
+      "value": 25,
+      "max_speed": 20,
+      "mass": 11,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 10,
+      "resources": [7, 9, 9, 5, 9],
+      "position": [740.39, 174.47, 0.0],
+      "value": 44,
+      "max_speed": 23,
+      "mass": 10,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 11,
+      "resources": [5, 6, 9, 5, 8],
+      "position": [647.58, 581.82, 0.0],
+      "value": 30,
+      "max_speed": 22,
+      "mass": 15,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 12,
+      "resources": [7, 7, 10, 5, 8],
+      "position": [504.78, 745.21, 0.0],
+      "value": 30,
+      "max_speed": 21,
+      "mass": 11,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 13,
+      "resources": [9, 7, 5, 9, 8],
+      "position": [272.84, 241.38, 0.0],
+      "value": 43,
+      "max_speed": 24,
+      "mass": 10,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 14,
+      "resources": [8, 8, 9, 6, 8],
+      "position": [522.12, 738.0, 0.0],
+      "value": 26,
+      "max_speed": 20,
+      "mass": 11,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 15,
+      "resources": [9, 5, 10, 7, 8],
+      "position": [272.71, 425.81, 0.0],
+      "value": 41,
+      "max_speed": 27,
+      "mass": 12,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 16,
+      "resources": [8, 8, 6, 10, 8],
+      "position": [300.75, 521.23, 0.0],
+      "value": 38,
+      "max_speed": 30,
+      "mass": 10,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 17,
+      "resources": [9, 7, 7, 5, 10],
+      "position": [220.28, 513.17, 0.0],
+      "value": 29,
+      "max_speed": 26,
+      "mass": 15,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 18,
+      "resources": [6, 5, 9, 8, 8],
+      "position": [682.99, 622.68, 0.0],
+      "value": 42,
+      "max_speed": 20,
+      "mass": 15,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 19,
+      "resources": [5, 8, 8, 9, 10],
+      "position": [412.66, 778.37, 0.0],
+      "value": 33,
+      "max_speed": 25,
+      "mass": 10,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 20,
+      "resources": [5, 9, 9, 7, 9],
+      "position": [466.18, 186.63, 0.0],
+      "value": 31,
+      "max_speed": 26,
+      "mass": 14,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 21,
+      "resources": [7, 10, 8, 7, 8],
+      "position": [687.48, 182.02, 0.0],
+      "value": 48,
+      "max_speed": 29,
+      "mass": 11,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 22,
+      "resources": [7, 8, 9, 7, 6],
+      "position": [599.23, 429.95, 0.0],
+      "value": 38,
+      "max_speed": 23,
+      "mass": 11,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 23,
+      "resources": [5, 5, 8, 9, 10],
+      "position": [182.59, 568.99, 0.0],
+      "value": 49,
+      "max_speed": 21,
+      "mass": 15,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 24,
+      "resources": [6, 10, 6, 8, 5],
+      "position": [538.6, 558.82, 0.0],
+      "value": 47,
+      "max_speed": 23,
+      "mass": 10,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 25,
+      "resources": [8, 7, 8, 7, 6],
+      "position": [175.35, 603.71, 0.0],
+      "value": 32,
+      "max_speed": 22,
+      "mass": 15,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 26,
+      "resources": [6, 5, 8, 6, 7],
+      "position": [425.75, 325.62, 0.0],
+      "value": 43,
+      "max_speed": 29,
+      "mass": 15,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 27,
+      "resources": [10, 5, 5, 10, 10],
+      "position": [309.97, 176.97, 0.0],
+      "value": 43,
+      "max_speed": 25,
+      "mass": 12,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 28,
+      "resources": [7, 7, 10, 8, 9],
+      "position": [285.25, 356.87, 0.0],
+      "value": 41,
+      "max_speed": 21,
+      "mass": 14,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 29,
+      "resources": [5, 7, 6, 7, 10],
+      "position": [106.08, 370.34, 0.0],
+      "value": 41,
+      "max_speed": 27,
+      "mass": 13,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 30,
+      "resources": [8, 8, 8, 8, 9],
+      "position": [205.85, 185.02, 0.0],
+      "value": 30,
+      "max_speed": 27,
+      "mass": 14,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 31,
+      "resources": [7, 7, 5, 9, 8],
+      "position": [380.73, 119.08, 0.0],
+      "value": 46,
+      "max_speed": 24,
+      "mass": 13,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 32,
+      "resources": [5, 9, 9, 9, 6],
+      "position": [510.05, 204.83, 0.0],
+      "value": 32,
+      "max_speed": 25,
+      "mass": 15,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 33,
+      "resources": [7, 9, 8, 7, 10],
+      "position": [725.57, 350.09, 0.0],
+      "value": 45,
+      "max_speed": 20,
+      "mass": 14,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 34,
+      "resources": [6, 7, 10, 7, 9],
+      "position": [290.48, 455.56, 0.0],
+      "value": 47,
+      "max_speed": 27,
+      "mass": 11,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 35,
+      "resources": [5, 7, 10, 5, 10],
+      "position": [286.23, 841.74, 0.0],
+      "value": 38,
+      "max_speed": 27,
+      "mass": 11,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 36,
+      "resources": [8, 5, 8, 7, 8],
+      "position": [859.93, 814.77, 0.0],
+      "value": 30,
+      "max_speed": 24,
+      "mass": 15,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 37,
+      "resources": [6, 5, 10, 8, 9],
+      "position": [325.19, 487.62, 0.0],
+      "value": 26,
+      "max_speed": 23,
+      "mass": 14,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 38,
+      "resources": [5, 8, 7, 8, 6],
+      "position": [432.02, 371.61, 0.0],
+      "value": 38,
+      "max_speed": 24,
+      "mass": 14,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 39,
+      "resources": [8, 8, 7, 7, 8],
+      "position": [866.83, 413.96, 0.0],
+      "value": 27,
+      "max_speed": 27,
+      "mass": 13,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 40,
+      "resources": [5, 8, 7, 7, 7],
+      "position": [151.12, 167.79, 0.0],
+      "value": 34,
+      "max_speed": 30,
+      "mass": 12,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 41,
+      "resources": [5, 8, 6, 5, 5],
+      "position": [246.22, 406.82, 0.0],
+      "value": 37,
+      "max_speed": 23,
+      "mass": 13,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 42,
+      "resources": [6, 10, 6, 5, 6],
+      "position": [826.32, 783.01, 0.0],
+      "value": 25,
+      "max_speed": 21,
+      "mass": 12,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 43,
+      "resources": [5, 8, 6, 10, 7],
+      "position": [495.71, 394.83, 0.0],
+      "value": 27,
+      "max_speed": 22,
+      "mass": 12,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 44,
+      "resources": [10, 6, 9, 6, 8],
+      "position": [140.23, 542.38, 0.0],
+      "value": 48,
+      "max_speed": 27,
+      "mass": 14,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 45,
+      "resources": [9, 6, 7, 8, 7],
+      "position": [552.32, 559.99, 0.0],
+      "value": 37,
+      "max_speed": 26,
+      "mass": 11,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 46,
+      "resources": [6, 6, 6, 5, 7],
+      "position": [229.48, 798.05, 0.0],
+      "value": 42,
+      "max_speed": 26,
+      "mass": 14,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 47,
+      "resources": [5, 10, 10, 10, 6],
+      "position": [297.09, 176.05, 0.0],
+      "value": 25,
+      "max_speed": 20,
+      "mass": 13,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 2
+    },
+    {
+      "id": 48,
+      "resources": [7, 6, 9, 5, 5],
+      "position": [744.99, 403.32, 0.0],
+      "value": 27,
+      "max_speed": 23,
+      "mass": 15,
+      "fly_energy_per_time": 1,
+      "hover_energy_per_time": 1
+    },
+    {
+      "id": 49,
+      "resources": [7, 9, 9, 9, 5],
+      "position": [399.71, 622.16, 0.0],
+      "value": 28,
+      "max_speed": 21,
+      "mass": 10,
+      "fly_energy_per_time": 3,
+      "hover_energy_per_time": 3
+    },
+    {
+      "id": 50,
+      "resources": [8, 6, 10, 5, 10],
+      "position": [233.47, 236.36, 0.0],
+      "value": 42,
+      "max_speed": 22,
+      "mass": 12,
+      "fly_energy_per_time": 2,
+      "hover_energy_per_time": 2
+    }
+  ],
+  "tasks": [
+    {
+      "id": 1,
+      "required_resources": [35, 35, 43, 36, 43],
+      "position": [875.84, 854.54, 0.0],
+      "time_window": [8, 99],
+      "threat": 0.62,
+      "execution_time": 14
+    },
+    {
+      "id": 2,
+      "required_resources": [29, 45, 43, 45, 37],
+      "position": [246.2, 884.55, 0.0],
+      "time_window": [3, 92],
+      "threat": 0.3,
+      "execution_time": 10
+    },
+    {
+      "id": 3,
+      "required_resources": [27, 43, 25, 37, 43],
+      "position": [866.98, 253.61, 0.0],
+      "time_window": [3, 96],
+      "threat": 0.86,
+      "execution_time": 15
+    },
+    {
+      "id": 4,
+      "required_resources": [44, 37, 36, 38, 41],
+      "position": [463.91, 105.66, 0.0],
+      "time_window": [3, 92],
+      "threat": 0.12,
+      "execution_time": 12
+    },
+    {
+      "id": 5,
+      "required_resources": [44, 35, 33, 29, 25],
+      "position": [357.53, 876.32, 0.0],
+      "time_window": [0, 98],
+      "threat": 0.77,
+      "execution_time": 15
+    }
+  ]
+}

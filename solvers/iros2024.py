@@ -12,7 +12,55 @@ def min_max_norm(value, min_value, max_value):
     return (value - min_value) / (max_value - min_value)
 
 
-class IROS2024_CoalitionFormationGame(CoalitionFormationGame):
+def cal_uav_utility_for_task(
+    uav: UAV,
+    task: Task,
+    uav_manager: UAVManager,
+    task_manager: TaskManager,
+    coalition: List[int],
+    hyper_params: HyperParams,
+):
+    # fly cost
+    fly_energy = uav.cal_fly_energy(task.position)
+    max_fly_energy = max(uav.cal_fly_energy(t.position) for t in task_manager.get_all())
+    min_fly_energy = min(uav.cal_fly_energy(t.position) for t in task_manager.get_all())
+    norm_fly_energy_cost = min_max_norm(fly_energy, min_fly_energy, max_fly_energy)
+
+    # hover cost
+    hover_energy = uav.cal_hover_energy(task.execution_time)
+    max_hover_energy = max(uav.cal_hover_energy(t.execution_time) for t in task_manager.get_all())
+    min_hover_energy = min(uav.cal_hover_energy(t.execution_time) for t in task_manager.get_all())
+    norm_hover_energy_cost = min_max_norm(hover_energy, min_hover_energy, max_hover_energy)
+
+    # cooperation cost
+    cooperation_cost = len(coalition) ** 2 / uav_manager.size()
+
+    # cost >= 0
+    cost = norm_fly_energy_cost + norm_hover_energy_cost + cooperation_cost
+    if cost == 0:
+        raise ValueError("cost should not be 0")
+    # task satisfaction rate = task satisfied resources num / task total resources num
+    obtained_resources = calculate_obtained_resources(
+        coalition, uav_manager, hyper_params.resources_num
+    )
+    # task.required_resources
+    task_satisfaction_rate = (
+        np.sum(obtained_resources >= task.required_resources) / hyper_params.resources_num
+    )
+    task_satisfaction_rate = min(task_satisfaction_rate, 1)
+    # resource_waste_rate = used / total_input
+    if np.sum(obtained_resources) == 0:
+        raise ValueError("obtained_resources should not be 0")
+    else:
+        task_resource_waste_rate = np.sum(
+            np.maximum(obtained_resources - task.required_resources, 0)
+        ) / np.sum(obtained_resources)
+    task_resource_use_rate = 1 - task_resource_waste_rate
+
+    return (task_satisfaction_rate + task_resource_use_rate) / cost
+
+
+class IROS2024_CoalitionFormationGame(MRTASolver):
     """
     ```cpp
     Partition Alg1(R /* UAV set*/, T /* Tasks set */) {
@@ -43,56 +91,6 @@ class IROS2024_CoalitionFormationGame(CoalitionFormationGame):
     ```
     """
 
-    @staticmethod
-    def cal_uav_utility_for_task(
-        uav: UAV,
-        task: Task,
-        uav_manager: UAVManager,
-        task_manager: TaskManager,
-        coalition: List[int],
-        hyper_params: HyperParams,
-    ):
-        # max_distance = max(uav.position.distance_to(t.position) for t in task_manager.get_all())
-        # min_distance = min(uav.position.distance_to(t.position) for t in task_manager.get_all())
-        # norm_distance = min_max_norm(uav.position.distance_to(task.position), min_distance, max_distance)
-
-        # fly cost
-        fly_energy = uav.cal_fly_energy(task.position)
-        max_fly_energy = max(uav.cal_fly_energy(t.position) for t in task_manager.get_all())
-        min_fly_energy = min(uav.cal_fly_energy(t.position) for t in task_manager.get_all())
-        norm_fly_energy_cost = min_max_norm(fly_energy, min_fly_energy, max_fly_energy)
-
-        # hover cost
-        hover_energy = uav.cal_hover_energy(task.execution_time)
-        max_hover_energy = max(
-            uav.cal_hover_energy(t.execution_time) for t in task_manager.get_all()
-        )
-        min_hover_energy = min(
-            uav.cal_hover_energy(t.execution_time) for t in task_manager.get_all()
-        )
-        norm_hover_energy_cost = min_max_norm(hover_energy, min_hover_energy, max_hover_energy)
-
-        # cooperation cost
-        cooperation_cost = len(coalition) ** 2 / uav_manager.size()
-
-        cost = norm_fly_energy_cost + norm_hover_energy_cost + cooperation_cost
-
-        # task satisfaction rate = task satisfied resources num / task total resources num
-        obtained_resources = calculate_obtained_resources(
-            coalition, uav_manager, hyper_params.resources_num
-        )
-        # task.required_resources
-        task_satisfaction_rate = (
-            np.sum(obtained_resources > task.required_resources) / hyper_params.resources_num
-        )
-        task_resource_waste_rate = (
-            np.sum(np.maximum(obtained_resources - task.required_resources, 0))
-            / hyper_params.resources_num
-        )
-        task_resource_use_rate = 1 - task_resource_waste_rate
-
-        return (task_satisfaction_rate + task_resource_use_rate) / cost
-
     def cal_uav_utility_in_colition(
         self, uav: UAV, task: Task, coalition: List[int], debug=False
     ) -> float:
@@ -101,39 +99,52 @@ class IROS2024_CoalitionFormationGame(CoalitionFormationGame):
             coalition_copy.remove(uav.id)
 
         u_not_have = sum(
-            self.cal_uav_utility_for_task(
-                uav, task, self.uav_manager, self.task_manager, coalition_copy, self.hyper_params
+            cal_uav_utility_for_task(
+                self.uav_manager.get(uavid),
+                task,
+                self.uav_manager,
+                self.task_manager,
+                coalition_copy,
+                self.hyper_params,
             )
-            for uav in self.uav_manager.get_all()
+            for uavid in coalition_copy
         )
 
         coalition_copy.append(uav.id)
 
         u_have = sum(
-            self.cal_uav_utility_for_task(
-                uav, task, self.uav_manager, self.task_manager, coalition_copy, self.hyper_params
+            cal_uav_utility_for_task(
+                self.uav_manager.get(uavid),
+                task,
+                self.uav_manager,
+                self.task_manager,
+                coalition_copy,
+                self.hyper_params,
             )
-            for uav in self.uav_manager.get_all()
+            for uavid in coalition_copy
         )
+        # may be negative,
+        # because if uavi has no resource contribution to task, if have:
+        # task_satisfaction_rate dont change, but
+        # task_resource_use_rate will be smaller
         utility = u_have - u_not_have
         return utility
 
     def allocate_once(self, uav_list: List[UAV], debug=False):
         changed = False
-        if len(uav_list) == self.uav_manager.size():
-            # first allocate
-            # each uav randomly choose a task, may be repeated
-            task_ids = self.task_manager.get_ids()
-            for uav in uav_list:
-                task_id = random.choice(task_ids)
-                self.coalition_manager.assign(uav, self.task_manager.get(task_id))
-        else:  # random sample allocate
-            task_list = self.task_manager.get_all()
-            for uav in uav_list:
-                for taskj in task_list:
-                    taski_id = self.coalition_manager.get_taskid_by_uavid(uav.id)
-                    if taski_id == taskj.id:
-                        continue
+        # random sample allocate
+        task_ids = self.task_manager.get_ids().copy()
+        task_ids.append(None)
+        for uav in uav_list:
+            for taskj_id in task_ids:  # try to divert to another task (not have None task)
+                taski_id = self.coalition_manager.get_taskid_by_uavid(uav.id)
+                if taski_id == taskj_id:  # taski == taskj, jump (may be both None)
+                    continue
+
+                if taski_id is None:  # not assigned to any task
+                    # try to divert to taskj
+                    ui = 0
+                else:
                     # else, taskj is other task
                     taski = self.task_manager.get(taski_id)
                     taski_coalition_copy = self.coalition_manager.get_coalition(taski_id).copy()
@@ -141,20 +152,33 @@ class IROS2024_CoalitionFormationGame(CoalitionFormationGame):
                     ui = self.cal_uav_utility_in_colition(
                         uav, taski, coalition=taski_coalition_copy, debug=debug
                     )
-                    # cal utility in taskj coalition
-                    taskj_coalition_copy = self.coalition_manager.get_coalition(taskj.id).copy()
+
+                if taskj_id is None:  # try to divert to taskj (None task)
+                    taskj = None
+                    uj = 0
+                else:
+                    taskj = self.task_manager.get(taskj_id)
+                    taskj_coalition_copy = self.coalition_manager.get_coalition(taskj_id).copy()
                     uj = self.cal_uav_utility_in_colition(
                         uav, taskj, coalition=taskj_coalition_copy, debug=debug
                     )
-                    if ui < uj:
-                        # uav leave taski, join taskj
-                        self.coalition_manager.unassign(uav)
-                        self.coalition_manager.assign(uav, taskj)
-                        changed = True
+
+                if ui < uj:
+                    # uav leave taski, join taskj
+                    self.coalition_manager.unassign(uav)
+                    self.coalition_manager.assign(uav, taskj)
+                    changed = True
+
         return changed
 
     def run_allocate(self, debug=False):
-        self.allocate_once(self.uav_manager.get_all(), debug=debug)
+        print("first allocate")
+        # first allocate
+        # each uav randomly choose a task, may be repeated
+        task_ids = self.task_manager.get_ids()
+        for uav in self.uav_manager.get_all():
+            task_id = random.choice(task_ids)
+            self.coalition_manager.assign(uav, self.task_manager.get(task_id))
 
         iter_cnt = 0
         sample_size = 3
@@ -169,5 +193,7 @@ class IROS2024_CoalitionFormationGame(CoalitionFormationGame):
             changed = self.allocate_once(sampled_uavs, debug=debug)
             if not changed:
                 iter_cnt += 1
+                print("unchanged")
             else:
                 iter_cnt = 0
+                print("changed")

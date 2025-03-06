@@ -20,7 +20,7 @@ def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Di
     """
     assignments = []
 
-    def backtrack(uav_index, current_assignment):
+    def backtrack(uav_index: int, current_assignment: Dict[int, List[int]]):
         if uav_index == len(uav_ids):
             # 所有无人机都已处理，将当前分配方案添加到结果中
             # 使用固定的任务 ID 顺序来确保格式一致
@@ -52,31 +52,8 @@ def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Di
     return assignments
 
 
-@dataclass
-class TaskAssignmentAlgorithm(ABC):
-    """
-    Abstract base class for task assignment algorithms.
-
-    Attributes:
-        uav_manager (UAVManager): The UAVManager instance.
-        task_manager (TaskManager): The TaskManager instance.
-    """
-
-    uav_manager: UAVManager
-    task_manager: TaskManager
-    hyper_params: HyperParams
-
-    @abstractmethod
-    def solve(self) -> Tuple[Dict[int, List[int]], float]:
-        """
-        Solves the task assignment problem.
-
-        Returns:
-            A tuple containing:
-              - A dictionary mapping task IDs to a list of UAV IDs assigned to that task.
-              - The objective function value (e.g., total reward, minimized cost).
-        """
-        pass
+from . import csci2024
+from framework.utils import calculate_obtained_resources
 
 
 def calcualte_assignment_score(
@@ -89,35 +66,27 @@ def calcualte_assignment_score(
     for task_id, uav_ids in assignment.items():
         task = task_manager.get(task_id)
         task_score = 0
-        all_uav_resources = np.zeros_like(task.required_resources)
+        coalition = assignment[task_id]
         for uav_id in uav_ids:
             uav = uav_manager.get(uav_id)
-            # distance = np.linalg.norm(uav.position - task.position)
-            distance = uav.position.distance_to(task.position)
-            max_distance = np.linalg.norm(hyper_params.map_shape)
-            resource_contribution = uav.resources.sum()  # simple
-            all_uav_resources += uav.resources
-            path_cost = 1 - distance / max_distance
-            threat_cost = uav.value * task.threat
-            task_score += (
-                hyper_params.alpha * resource_contribution
-                + hyper_params.beta * path_cost
-                - hyper_params.gamma * threat_cost
+            obtained_resources = calculate_obtained_resources(
+                coalition, uav_manager, hyper_params.resources_num
             )
-        resource_overflow = np.maximum((all_uav_resources - task.required_resources), 0).sum()
-        # print(f"resource_overflow: {resource_overflow}")
-        task_score -= hyper_params.alpha * resource_overflow
+            benefit = csci2024.calculate_uav_task_benefit(
+                uav, task, coalition, obtained_resources, hyper_params
+            )
+            task_score += benefit
         score += task_score
     return score
 
 
-class EnumerationAlgorithm(TaskAssignmentAlgorithm):
+class EnumerationAlgorithm(MRTASolver):
     """
     Implements an enumeration (brute-force) algorithm for task assignment.
     This algorithm checks all possible combinations of UAVs and tasks.
     """
 
-    def solve(self) -> Tuple[Dict[int, List[int]], float]:
+    def run_allocate(self, debug=False):
         """
         Solves the task assignment problem using enumeration.
         """
@@ -132,48 +101,17 @@ class EnumerationAlgorithm(TaskAssignmentAlgorithm):
         # for assignment in all_assignments:
         #     print(assignment)
         for assignment in all_assignments:
-            # print(assignment)
             score = calcualte_assignment_score(
                 assignment, self.uav_manager, self.task_manager, self.hyper_params
             )
+            print(f"{assignment}; score: {score: .3f}")
             # print(f"score: {score}")
             if score > best_score:
                 best_score = score
                 best_assignment = assignment
-        return best_assignment, best_score
+        print(f"Best Assignment: {best_assignment}")
+        self.coalition_manager.update_from_assignment(best_assignment)
 
 
 if __name__ == "__main__":
-    import json
-
-    resources_num = 2
-    map_shape = (20, 20, 0)
-    gamma = 0.1
-
-    with open("./tests/case1.json", "r") as f:
-        data = json.load(f)
-
-    uav_manager = UAVManager.from_dict(data["uavs"])
-    task_manager = TaskManager.from_dict(data["tasks"])
-
-    enumeration_algorithm = EnumerationAlgorithm(
-        uav_manager,
-        task_manager,
-        resources_num=resources_num,
-        map_shape=map_shape,
-        gamma=gamma,
-    )
-    best_assignment, best_score = enumeration_algorithm.solve()
-
-    print(f"Best Assignment: {best_assignment}")
-    print(f"Best Score: {best_score}")
-
-    coalition_set = CoalitionManager(uav_manager, task_manager, assignment=best_assignment)
-    coalition_set.plot_map()
-
-    # uav_ids = uav_manager.get_uav_ids()
-    # task_ids = task_manager.get_task_ids()
-    # assignments = generate_all_assignments(uav_ids, task_ids)
-    # # print(assignments)
-    # for idx, assignment in enumerate(assignments):
-    #     print(f"方案 {idx + 1}: {assignment}")
+    pass

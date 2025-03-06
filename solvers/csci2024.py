@@ -5,36 +5,10 @@ import random
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-# from game import CoalitionFormationGame
-# from uav import UAV, UAVManager
-# from task import Task, TaskManager, get_resources_weights
-# from coalition import CoalitionManager
-# from utils import calculate_obtained_resources
-# from base import HyperParams
 from framework import *
 from framework.utils import calculate_obtained_resources, get_resources_weights
 
 np.set_printoptions(precision=2)
-
-
-def calculate_resource_contribution(
-    Kj: np.ndarray,
-    I: np.ndarray,
-    O: float,
-    P: float,
-):
-    """
-    Returns:
-        float: The resource contribution value.
-
-    val(ui, tj) = K[j, :] · I - P · O
-        K: (m, l) 权重矩阵, P: 常数权值, 对未利用资源的惩罚系数
-        K[j, :] = [k1, k2, ..., kl]: 第 j 个任务的资源权重向量, K[j, k] 表示第 k 个资源的权重
-        I = [i1, i2, ..., il]: 无人机加入任务对应的联盟集合中可利用的每类资源的数目, 取决于任务本身与联盟内其他成员?
-        O: 该无人机未利用的总资源数目, 即加入该联盟后冗余资源总数目
-    """
-    contribution = np.dot(Kj, I) - P * O
-    return max(0, contribution)
 
 
 def calculate_path_cost(
@@ -85,7 +59,7 @@ def calculate_threat_cost(uav: UAV, task: Task):
     return uav.value * task.threat
 
 
-def cal_resource_contribution(
+def calculate_resource_contribution(
     uav: UAV,
     task: Task,
     task_collation: List[int],
@@ -127,11 +101,22 @@ def cal_resource_contribution(
 
     if debug:
         print(f"Kj: {Kj}, I: {I}, O: {O: .2f}, P: {P: .2f}")
-    val = calculate_resource_contribution(Kj, I, O, P)
-    return val
+    # val = calculate_resource_contribution(Kj, I, O, P)
+    """
+    Returns:
+        float: The resource contribution value.
+
+    val(ui, tj) = K[j, :] · I - P · O
+        K: (m, l) 权重矩阵, P: 常数权值, 对未利用资源的惩罚系数
+        K[j, :] = [k1, k2, ..., kl]: 第 j 个任务的资源权重向量, K[j, k] 表示第 k 个资源的权重
+        I = [i1, i2, ..., il]: 无人机加入任务对应的联盟集合中可利用的每类资源的数目, 取决于任务本身与联盟内其他成员?
+        O: 该无人机未利用的总资源数目, 即加入该联盟后冗余资源总数目
+    """
+    contribution = np.dot(Kj, I) - P * O
+    return max(0, contribution)
 
 
-def cal_uav_task_benefit(
+def calculate_uav_task_benefit(
     uav: UAV,
     task: Task,
     task_collation: List[int],
@@ -158,7 +143,7 @@ def cal_uav_task_benefit(
     if debug:
         print(f"cal_uav_task_benefit(uav=u{uav.id}, task=t{task.id})")
     # 计算资源贡献
-    resource_contribution = cal_resource_contribution(
+    resource_contribution = calculate_resource_contribution(
         uav, task, task_collation, task_obtained_resources, debug
     )
     # 计算路径成本
@@ -186,7 +171,7 @@ def cal_uav_task_benefit(
     return total_benefit
 
 
-def cal_task_on_given_coalition_benefit(
+def calculate_task_on_given_coalition_benefit(
     task: Task,
     given_coalition: List[int],
     uav_manager: UAVManager,
@@ -206,7 +191,9 @@ def cal_task_on_given_coalition_benefit(
             given_coalition, uav_manager, hyper_params.resources_num
         )
 
-        benefit = cal_uav_task_benefit(uav, task, given_coalition, obtained_resources, hyper_params)
+        benefit = calculate_uav_task_benefit(
+            uav, task, given_coalition, obtained_resources, hyper_params
+        )
         utility += benefit
     if debug:
         print(f"  utility={utility:.2f}")
@@ -215,7 +202,7 @@ def cal_task_on_given_coalition_benefit(
 
 
 @dataclass
-class ChinaScience2024_CoalitionFormationGame(CoalitionFormationGame):
+class ChinaScience2024_CoalitionFormationGame(MRTASolver):
     """Represents a coalition formation game where UAVs are assigned to tasks based on benefits.
 
     The game involves forming coalitions of UAVs for each task, considering factors such as resource contribution,
@@ -267,7 +254,7 @@ class ChinaScience2024_CoalitionFormationGame(CoalitionFormationGame):
                     coalition, self.uav_manager, self.hyper_params.resources_num
                 )
 
-                benefit_matrix[i, j] = cal_uav_task_benefit(
+                benefit_matrix[i, j] = calculate_uav_task_benefit(
                     uav, task, coalition, obtained_resources, self.hyper_params
                 )
         # debug = True
@@ -289,11 +276,11 @@ class ChinaScience2024_CoalitionFormationGame(CoalitionFormationGame):
         if uav.id in coalition:  # uav already in coalition
             coalition_copy.remove(uav.id)
 
-        u_not_have = cal_task_on_given_coalition_benefit(
+        u_not_have = calculate_task_on_given_coalition_benefit(
             task, coalition_copy, self.uav_manager, self.hyper_params
         )
         coalition_copy.append(uav.id)
-        u_have = cal_task_on_given_coalition_benefit(
+        u_have = calculate_task_on_given_coalition_benefit(
             task, coalition_copy, self.uav_manager, self.hyper_params
         )
         utility = u_have - u_not_have
@@ -305,7 +292,7 @@ class ChinaScience2024_CoalitionFormationGame(CoalitionFormationGame):
         """
         total_utility = 0.0
         for task in self.task_manager:
-            total_utility += cal_task_on_given_coalition_benefit(
+            total_utility += calculate_task_on_given_coalition_benefit(
                 task,
                 self.coalition_manager.get_coalition(task.id),
                 self.uav_manager,

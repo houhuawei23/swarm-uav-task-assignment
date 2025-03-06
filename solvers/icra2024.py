@@ -7,7 +7,7 @@ import numpy as np
 from framework import *
 
 
-class ICRA2024_CoalitionFormationGame(CoalitionFormationGame):
+class ICRA2024_CoalitionFormationGame(MRTASolver):
     """
     ```cpp
     // Alg1: Decision-Making Alg for each ri

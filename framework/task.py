@@ -64,6 +64,9 @@ class Task(Entity):
         return (
             f"T_{self.id}(req={self.required_resources}, tw={self.time_window}, thr={self.threat})"
         )
+    
+    def is_zero_task(self):
+        return self.id == 0
 
 
 @dataclass

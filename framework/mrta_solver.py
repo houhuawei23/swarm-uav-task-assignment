@@ -7,7 +7,7 @@ from .coalition import CoalitionManager
 
 
 @dataclass
-class CoalitionFormationGame:
+class MRTASolver:
     uav_manager: UAVManager
     task_manager: TaskManager
     coalition_manager: CoalitionManager

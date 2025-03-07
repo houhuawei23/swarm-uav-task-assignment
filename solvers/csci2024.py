@@ -335,7 +335,7 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
                     print(f"Assigning u{uav.id} to t{task.id}")
                 # 6. update the required resources of task
                 # task_obtained_resources += uav.resources
-                self.coalition_manager.assign(uav, task)
+                self.coalition_manager.assign(uav.id, task.id)
                 have_assigned = True
         return have_assigned
 
@@ -377,7 +377,7 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
                         if debug:
                             print(f"utility: u{uav.id}-t{taskj.id}={move_to_taskj_utility}")
                         if move_to_taskj_utility > cur_utility:
-                            self.coalition_manager.unassign(uav)  # 无人机退出原联盟
+                            self.coalition_manager.unassign(uav.id)  # 无人机退出原联盟
                             stable = False
                             break
 

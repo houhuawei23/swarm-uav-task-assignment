@@ -14,6 +14,15 @@ class MRTASolver:
     hyper_params: HyperParams
 
     def run_allocate(self, debug=False):
+        iter_cnt = 0
+
+        while True:
+            print(f"iter {iter_cnt}")
+            if iter_cnt > self.hyper_params.max_iter:
+                print(f"reach max iter {self.hyper_params.max_iter}")
+                break
+            iter_cnt += 1
+
         raise NotImplementedError("This method should be implemented by the subclass.")
 
 

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 
 from framework import (
+    UAV,
     UAVManager,
     TaskManager,
     HyperParams,
@@ -17,8 +18,11 @@ from framework.utils import *
 from solvers import (
     EnumerationAlgorithm,
     IROS2024_CoalitionFormationGame,
+    ICRA2024_CoalitionFormationGame,
     ChinaScience2024_CoalitionFormationGame,
 )
+
+from solvers.icra2024 import AutoUAV
 
 
 @dataclass
@@ -37,21 +41,24 @@ def run_solver(
     result_queue: Queue = None,
 ):
     print("---")
-    coalition_manager = CoalitionManager(uav_manager, task_manager, hyper_params=hyper_params)
-    if cmd_args.choice == "iros":
-        solver = IROS2024_CoalitionFormationGame(
-            uav_manager, task_manager, coalition_manager, hyper_params=hyper_params
-        )
-    elif cmd_args.choice == "csci":
+    coalition_manager = CoalitionManager(uav_manager.get_ids(), task_manager.get_ids())
+    if cmd_args.choice == "csci":
         solver = ChinaScience2024_CoalitionFormationGame(
-            uav_manager, task_manager, coalition_manager, hyper_params=hyper_params
+            uav_manager, task_manager, coalition_manager, hyper_params
+        )
+    elif cmd_args.choice == "iros":
+        solver = IROS2024_CoalitionFormationGame(
+            uav_manager, task_manager, coalition_manager, hyper_params
+        )
+    elif cmd_args.choice == "icra":
+        solver = ICRA2024_CoalitionFormationGame(
+            uav_manager, task_manager, coalition_manager, hyper_params
         )
     elif cmd_args.choice == "enum":
         solver = EnumerationAlgorithm(uav_manager, task_manager, coalition_manager, hyper_params)
     else:
         raise ValueError("Invalid choice")
 
-    # coalition_set.plot_map()
     start_time = time.time()
     solver.run_allocate(debug=False)
     end_time = time.time()
@@ -66,7 +73,9 @@ def run_solver(
         uav_manager, task_manager, coalition_manager.task2coalition, hyper_params.resources_num
     )
     print(f"Eval Result: {eval_reuslt}")
-    coalition_manager.plot_map(cmd_args.output_path, plot_unassigned=True)
+    coalition_manager.plot_map(
+        uav_manager, task_manager, hyper_params, cmd_args.output_path, plot_unassigned=True
+    )
 
 
 def simple_run(uav_manager, task_manager, hyper_params, cmd_args: CmdArgs):
@@ -141,7 +150,11 @@ def main():
     with open(cmd_args.test_case_path, "r") as f:
         data = json.load(f)
 
-    uav_manager = UAVManager.from_dict(data["uavs"])
+    UAVType = UAV
+    if cmd_args.choice == "icra":
+        UAVType = AutoUAV
+    print(f"Using UAV Type: {UAVType}")
+    uav_manager = UAVManager.from_dict(data["uavs"], UAVType)
     task_manager = TaskManager.from_dict(data["tasks"])
 
     hyper_params = HyperParams(

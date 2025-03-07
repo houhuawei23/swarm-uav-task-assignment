@@ -74,6 +74,9 @@ def plot_entities_on_axes(ax: plt.Axes, entities: List[Entity], **kwargs) -> Non
         ax.text(x, y + text_delta, s=entity.brief_info(), ha="center")
 
 
+import random
+
+
 @dataclass
 class EntityManager:
     # entities: List[Entity] = field(default_factory=list)
@@ -117,6 +120,11 @@ class EntityManager:
 
     def plot(self, ax: plt.Axes, **kwargs) -> None:
         plot_entities_on_axes(ax, self.entities.values(), **kwargs)
+
+    def random_one(self) -> Entity:
+        if not self.entities:
+            raise ValueError("No entities in the manager.")
+        return random.choice(list(self.entities.values()))
 
 
 @dataclass(repr=True)

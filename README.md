@@ -25,94 +25,83 @@
 </p>
 
 ```python
-def run_enumeration(
+def run_solver(
     uav_manager: UAVManager,
     task_manager: TaskManager,
     hyper_params: HyperParams,
-    result_queue: Queue = None,  # for return result
-):
-    print("Enumeration")
-    enumeration_algorithm = EnumerationAlgorithm(uav_manager, task_manager, hyper_params)
-    start_time = time.time()
-    best_assignment, best_score = enumeration_algorithm.solve()
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    if result_queue is not None:
-        result_queue.put(elapsed_time)
-    print(f"Elapsed Time: {elapsed_time}")
-    print(f"Best Assignment: {best_assignment}")
-    print(f"Best Score: {best_score}")
-
-    enu_coalition_set = CoalitionManager(uav_manager, task_manager, assignment=best_assignment)
-    enu_coalition_set.plot_map(".enumeration_result.png")
-
-
-def run_coalition_game(
-    uav_manager: UAVManager,
-    task_manager: TaskManager,
-    hyper_params: HyperParams,
+    cmd_args: CmdArgs,
     result_queue: Queue = None,
 ):
-    print("Coalition Game")
-    coalition_manager = CoalitionManager(uav_manager, task_manager)
-    game = CoalitionFormationGame(uav_manager, task_manager, coalition_manager, hyper_params=hyper_params)
+    coalition_manager = CoalitionManager(uav_manager.get_ids(), task_manager.get_ids())
+    if cmd_args.choice == "csci":
+        solver = ChinaScience2024_CoalitionFormationGame(
+            uav_manager, task_manager, coalition_manager, hyper_params
+        )
+    elif cmd_args.choice == "iros":
+        solver = IROS2024_CoalitionFormationGame(
+            uav_manager, task_manager, coalition_manager, hyper_params
+        )
+    elif cmd_args.choice == "icra":
+        solver = ICRA2024_CoalitionFormationGame(
+            uav_manager, task_manager, coalition_manager, hyper_params
+        )
+    elif cmd_args.choice == "enum":
+        solver = EnumerationAlgorithm(uav_manager, task_manager, coalition_manager, hyper_params)
+    else:
+        raise ValueError("Invalid choice")
 
-    # coalition_set.plot_map()
     start_time = time.time()
-    game.run(debug=False)
+    solver.run_allocate(debug=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
+
     if result_queue is not None:
         result_queue.put(elapsed_time)
-    print(f"Coalition Game Result: {coalition_manager}")
+
+    print(f"{cmd_args.choice} Result: {coalition_manager}")
 
     eval_reuslt = evaluate_assignment(
         uav_manager, task_manager, coalition_manager.task2coalition, hyper_params.resources_num
     )
     print(f"Eval Result: {eval_reuslt}")
-    coalition_manager.plot_map(".coalition_game_result.png", plot_unassigned=True)
-
+    coalition_manager.plot_map(
+        uav_manager, task_manager, hyper_params, cmd_args.output_path, plot_unassigned=True
+    )
 
 ```
 
 ```bash
-$ python sim.py --test_case ../tests/case1.json
+$ python ./sim.py --test_case ./tests/case0.json --choice icra
 
-Using test case: ../tests/case1.json
-UAVManager managing 5 UAVs
-  u1, re=[5 3], pos=[0 0 0], val=10, ms=20
-  u2, re=[ 7 11], pos=[2.5 3.5 0. ], val=10, ms=20
-  u3, re=[2 7], pos=[10 10  0], val=15, ms=25
-  u4, re=[19  4], pos=[16.  17.5  0. ], val=15, ms=25
-  u5, re=[ 6 21], pos=[20 20  0], val=20, ms=30
+Using test case: ./tests/case0.json, output path: ./.images/.result.png, choice: icra
+Using UAV Type: <class 'solvers.icra2024.AutoUAV'>
+HyperParams(resources_num=2, map_shape=(np.int64(21), np.int64(21), 0), alpha=1.0, beta=10.0, gamma=0.05, mu=-1.0, max_iter=25)
+UAVManager with 3 uavs.
+  AutoUAV(id=1, position=Point(xyz=array([0, 0, 0])), resources=array([5, 3]), value=10, max_speed=20, mass=1.0, fly_energy_per_time=1.1958796458778673, hover_energy_per_time=2.038716644186131, uav_manager=None, task_manager=None, coalition_manager=None, hyper_params=None, uav_update_step_dict={}, changed=False)
+  ...
 TaskManager with 2 tasks.
-  T1: re=[10 12], pos=[5 5 0], tw=[0, 100], thr=0.5
-  T2: re=[25  8], pos=[15 15  0], tw=[0, 100], thr=0.7
----
-Coalition Game
-Iteration 0 begin.
-Cur coalition set: {1: [], 2: [], None: [1, 2, 3, 4, 5]}
-check_stability True, Iteration 1 end.
-Coalition Game Result: {1: [2], 2: [4], None: [1, 3, 5]}
----
-Enumeration
-All 243 assignments:
-Best Assignment: {1: [1, 2], 2: [4, 5]}
-Best Score: 54.851725195536254
+  Task(id=1, position=Point(xyz=array([5, 5, 0])), required_resources=array([4, 2]), time_window=[0, 100], threat=0.5, execution_time=2.821083273573082, resources_nums=2)
+  ...
+...
+icra Result: {1: [1], 2: [3], None: [2]}
+Eval Result: EvaluationResult(completion_rate=0.5, resource_use_rate=0.7333333333333334)
 ```
 
 ## TODO
 
-- [x] implement the algorithm in the [paper](https://doi.org/10.1360/ssi-2024-0167).
+- [x] implement the algorithm in the [csci2024@薛舒心](https://doi.org/10.1360/ssi-2024-0167), `./solvers/csci.py`
   - [x] add time constraints
   - [ ] uavs and tasks cluster
 - [x] fix bugs in CoalitionFormationGame task assignment algorithm.
 - [x] Calculate various evaluation indicators, such as:
   - task completion rate, and resource use rate
+- [x] Implement algorithm in [iros2024@LiwangZhang](https://doi.org/10.1109/IROS58592.2024.10801429), `./solvers/iros.py`
+- [x] Implement algorithm in [icra2024@LiwangZhang](https://doi.org/10.1109/ICRA57147.2024.10611476), `./solvers/icra.py`
 
 ## Project Structure
 
 - `src/`:
+
   - `base.py`: base class for the project.
   - `uav.py`: the class for `UAV` and `UAVManager`.
   - `task.py`: the class for `Task` and `TaskManager`.

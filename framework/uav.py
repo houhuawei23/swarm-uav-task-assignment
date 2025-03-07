@@ -25,9 +25,9 @@ class UAV(Entity):
     value: float  # 无人机价值
     max_speed: float  # 最大速度
 
-    mass: float = field(default=1.0)  # 无人机重量
-    fly_energy_per_time: float = field(default=2)  # 飞行能耗 per time, per mass
-    hover_energy_per_time: float = field(default=2)  # 悬停能耗 per time, per mass
+    mass: float  # 无人机重量
+    fly_energy_per_time: float  # 飞行能耗 per time, per mass
+    hover_energy_per_time: float  # 悬停能耗 per time, per mass
 
     def __post_init__(self):
         super().__post_init__()
@@ -77,17 +77,23 @@ class UAV(Entity):
         return self.mass * hover_time * self.hover_energy_per_time
 
 
+from typing import Type
+
+
 @dataclass
 class UAVManager(EntityManager):
     def __init__(self, uavs: List[UAV] = []):
         super().__init__(uavs)
 
-    def get(self, id) -> UAV:
+    def get(self, id: int) -> UAV:
         return super().get(id)
 
+    def random_one(self) -> UAV:
+        return super().random_one()
+
     @classmethod
-    def from_dict(cls, data):
-        uavs = [UAV.from_dict(task_data) for task_data in data]
+    def from_dict(cls, data: List[Dict], UAVType: Type[UAV] = UAV):
+        uavs = [UAVType.from_dict(task_data) for task_data in data]
         return cls(uavs)
 
     def format_print(self):

@@ -5,7 +5,7 @@ import numpy as np
 import json
 import subprocess
 
-from .uav import UAVManager
+from .uav import UAV, UAVManager
 from .task import TaskManager
 
 
@@ -34,11 +34,19 @@ def calculate_map_shape(uav_manager: UAVManager, task_manager: TaskManager):
 
 
 def calculate_obtained_resources(
-    collation: List[int], uav_manager: UAVManager, resources_num: int
+    coalition: List[int], uav_manager: UAVManager, resources_num: int
 ) -> List[float]:
     obtained_resources = np.zeros(resources_num)
-    for uav_id in collation:
+    for uav_id in coalition:
         uav = uav_manager.get(uav_id)
+        obtained_resources += uav.resources
+
+    return obtained_resources
+
+
+def calculate_obtained_resources_beta(uav_coalition: List[UAV], resources_num: int):
+    obtained_resources = np.zeros(resources_num)
+    for uav in uav_coalition:
         obtained_resources += uav.resources
 
     return obtained_resources

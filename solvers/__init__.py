@@ -1,7 +1,7 @@
 from .csci2024 import ChinaScience2024_CoalitionFormationGame
 from .iros2024 import IROS2024_CoalitionFormationGame
 from .icra2024 import ICRA2024_CoalitionFormationGame
-from .enum import EnumerationAlgorithm
+from .enum_alg import EnumerationAlgorithm
 
 __all__ = [
     "ChinaScience2024_CoalitionFormationGame",

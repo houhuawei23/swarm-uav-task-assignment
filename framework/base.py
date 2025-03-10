@@ -3,11 +3,21 @@ from dataclasses import dataclass, field
 
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 
 @dataclass(repr=True, eq=True)
 class Point:
-    xyz: np.ndarray = field(init=False)
+    xyz: np.ndarray
+
+    def __init__(self, xyz: List[float] | np.ndarray | "Point"):
+        if isinstance(xyz, Point):
+            self.xyz = xyz.xyz
+        elif isinstance(xyz, (list, np.ndarray)):
+            assert len(xyz) == 3
+            self.xyz = np.array(xyz)
+        else:
+            raise TypeError("xyz must be a list, numpy array, or Point")
 
     @property
     def x(self) -> float:
@@ -21,9 +31,8 @@ class Point:
     def z(self) -> float:
         return self.xyz[2]
 
-    def __init__(self, xyz: List[float]):
-        assert len(xyz) == 3
-        self.xyz = np.array(xyz)
+    def __eq__(self, other: "Point") -> bool:
+        return np.all(self.xyz == other.xyz)
 
     def __add__(self, other: "Point") -> "Point":
         return Point(self.xyz + other.xyz)
@@ -45,8 +54,18 @@ class Entity:
     id: int
     position: Point
 
+    def __init__(self, id: int, position: Point | List[float] | np.ndarray):
+        self.id = id
+        self.position = Point(position)
+        if not isinstance(self.position, Point):
+            raise TypeError("position must be a Point")
+        # self.position = Point(position) if isinstance(position, (list, np.ndarray)) else position
+
     def __post_init__(self):
-        self.position = Point(self.position)
+        if not isinstance(self.id, int):
+            raise TypeError("id must be an integer")
+        if not isinstance(self.position, Point):
+            raise TypeError("position must be a Point")
 
     def type(self):
         return self.__class__.__name__
@@ -54,13 +73,13 @@ class Entity:
     def to_dict(self) -> Dict:
         return {
             "id": self.id,
+            "type": self.type(),
             "position": self.position.tolist(),
         }
 
     @classmethod
-    def from_dict(self, data: Dict):
-        self.id = data["id"]
-        self.position = Point(data["position"])
+    def from_dict(cls, data: Dict) -> "Entity":
+        return cls(data["id"], data["position"])
 
     def brief_info(self) -> str:
         return f"{self.type()} {self.id} at {self.position}"
@@ -74,16 +93,17 @@ def plot_entities_on_axes(ax: plt.Axes, entities: List[Entity], **kwargs) -> Non
         ax.text(x, y + text_delta, s=entity.brief_info(), ha="center")
 
 
-import random
-
-
 @dataclass
 class EntityManager:
     # entities: List[Entity] = field(default_factory=list)
     entities: Dict[int, Entity] = field(default_factory=dict)
 
-    def __post_init__(self):
-        self.entities = {entity.id: entity for entity in self.entities}
+    def __init__(self, entity_list: List[Entity] = []):
+        if entity_list is None:
+            self.entities = {}
+        else:
+            self.entities = {entity.id: entity for entity in entity_list}
+
 
     def add(self, entity: Entity):
         if entity.id in self.entities:
@@ -106,7 +126,7 @@ class EntityManager:
     def get_ids(self) -> List[int]:
         return list(self.entities.keys())
 
-    def to_dict(self) -> Dict[int, Dict]:
+    def to_dict_list(self) -> List[Dict[int, Dict]]:
         return [entity.to_dict() for entity in self.entities.values()]
 
     def size(self) -> int:
@@ -124,6 +144,8 @@ class EntityManager:
     def random_one(self) -> Entity:
         if not self.entities:
             raise ValueError("No entities in the manager.")
+        # return random.sample(list(self.entities.values()), 1)[0]
+        # which one is better?
         return random.choice(list(self.entities.values()))
 
 
@@ -138,23 +160,13 @@ class HyperParams:
     max_iter: int  # 最大迭代次数
 
 
+@dataclass
+class GenParams:
+    region_ranges: List[Tuple[float, float]] = field(
+        default_factory=lambda: [(0, 100), (0, 100), (0, 100)]
+    )
+    resources_num: int = field(default=3)
+
+
 if __name__ == "__main__":
-    p1 = Point([1, 2, 3])
-    p2 = Point([4, 5, 6])
-    print(p1.distance_to(p2))  # 5.196152422706632
-
-    e1 = Entity(1, [1, 2, 3])
-    e2 = Entity(2, [4, 5, 6])
-    em = EntityManager([e1, e2])
-    print(em.get_all())
-
-    fig, ax = plt.subplots()
-    em.plot(ax, color="red", marker="s")
-
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_title("Entities")
-    ax.grid(True)
-    ax.legend()
-
-    plt.show()
+    pass

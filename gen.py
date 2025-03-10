@@ -5,85 +5,9 @@ import random
 import argparse
 
 from framework.utils import format_json
-
+from framework.uav import UAVGenParams, generate_uavs
+from framework.task import TaskGenParams, generate_tasks
 from dataclasses import dataclass, field
-
-
-@dataclass
-class Params:
-    region_ranges: List[Tuple[float, float]]
-    resources_num: int
-
-
-@dataclass
-class UAVParams(Params):
-    resources_range: Tuple[float, float]
-    value_range: Tuple[float, float]
-    speed_range: Tuple[float, float]
-
-    uav_mass_range: Tuple[float, float] = field(default=None)
-    fly_energy_per_time_range: Tuple[float, float] = field(default=None)
-    hover_energy_per_time_range: Tuple[float, float] = field(default=None)
-    comm_bandwidth_range: Tuple[float, float] = field(default=None)
-    trans_power_range: Tuple[float, float] = field(default=None)
-
-
-@dataclass
-class TaskParams(Params):
-    required_resources_range: Tuple[float, float]
-    time_window_ranges: List[Tuple[float, float]]
-    threat_range: Tuple[float, float]
-    execution_time_range: Tuple[float, float] = field(default=None)
-
-
-precision = 2
-
-
-def generate_uavs_beta(num_uavs: int, params: UAVParams):
-    uavs = []
-    for id in range(1, num_uavs + 1):
-        uav = {
-            "id": id,
-            "resources": [
-                random.randint(*params.resources_range) for _ in range(params.resources_num)
-            ],
-            "position": [
-                round(random.uniform(*a_range), precision) for a_range in params.region_ranges
-            ],
-            "value": random.randint(*params.value_range),
-            "max_speed": random.randint(*params.speed_range),
-        }
-        if params.uav_mass_range is not None:
-            uav["mass"] = random.randint(*params.uav_mass_range)
-        if params.fly_energy_per_time_range is not None:
-            uav["fly_energy_per_time"] = random.randint(*params.fly_energy_per_time_range)
-        if params.hover_energy_per_time_range is not None:
-            uav["hover_energy_per_time"] = random.randint(*params.hover_energy_per_time_range)
-        uavs.append(uav)
-    return uavs
-
-
-# 生成 Task 数据
-def generate_tasks_beta(num_tasks: int, params: TaskParams):
-    tasks = []
-    for id in range(1, num_tasks + 1):
-        task = {
-            "id": id,
-            "required_resources": [
-                random.randint(*params.required_resources_range)
-                for _ in range(params.resources_num)
-            ],
-            "position": [
-                round(random.uniform(*a_range), precision) for a_range in params.region_ranges
-            ],
-            "time_window": [random.randint(*w_range) for w_range in params.time_window_ranges],
-            "threat": round(random.uniform(*params.threat_range), precision),
-        }
-        if params.execution_time_range is not None:
-            task["execution_time"] = random.randint(*params.execution_time_range)
-
-        tasks.append(task)
-    return tasks
 
 
 def gen_iros2024_case(out_path):
@@ -102,7 +26,7 @@ def gen_iros2024_case(out_path):
     comm_bandwidth_range = (5, 15)  # kHz
     trans_power_range = (20, 30)  # dBm
 
-    uav_params = UAVParams(
+    uav_params = UAVGenParams(
         region_ranges=region_ranges,
         resources_num=resources_num,
         resources_range=resources_range,
@@ -120,7 +44,7 @@ def gen_iros2024_case(out_path):
     time_window_ranges = [(0, 10), (90, 100)]
     threat_range = (0.1, 0.9)
 
-    task_params = TaskParams(
+    task_params = TaskGenParams(
         region_ranges=region_ranges,
         resources_num=resources_num,
         required_resources_range=required_resources_range,
@@ -134,8 +58,8 @@ def gen_iros2024_case(out_path):
     attenuation_factor = 3  # 衰减因子
     noise_power_range = [-60, -70]  # dBm
 
-    uavs = generate_uavs_beta(num_uavs, uav_params)
-    tasks = generate_tasks_beta(num_tasks, task_params)
+    uavs = generate_uavs(num_uavs, uav_params)
+    tasks = generate_tasks(num_tasks, task_params)
     data = {
         "resources_num": resources_num,
         "num_uavs": num_uavs,
@@ -165,7 +89,7 @@ def gen_csci2024_data(out_path):
     time_window_ranges = [(0, 10), (90, 100)]
     threat_range = (0.1, 0.9)
 
-    uav_params = UAVParams(
+    uav_params = UAVGenParams(
         region_ranges=region_ranges,
         resources_num=resources_num,
         resources_range=resources_range,
@@ -173,7 +97,7 @@ def gen_csci2024_data(out_path):
         speed_range=speed_range,
     )
 
-    task_params = TaskParams(
+    task_params = TaskGenParams(
         region_ranges=region_ranges,
         resources_num=resources_num,
         required_resources_range=required_resources_range,
@@ -181,8 +105,8 @@ def gen_csci2024_data(out_path):
         threat_range=threat_range,
     )
     # generate_data(num_uavs=50, num_tasks=10, output_file=out_path, params=params)
-    uavs = generate_uavs_beta(num_uavs, uav_params)
-    tasks = generate_tasks_beta(num_tasks, task_params)
+    uavs = generate_uavs(num_uavs, uav_params)
+    tasks = generate_tasks(num_tasks, task_params)
     data = {
         "resources_num": resources_num,
         "num_uavs": num_uavs,
@@ -233,4 +157,3 @@ if __name__ == "__main__":
     elif args.choice == "iros2024":
         print("Generating IROS2024 data")
         gen_iros2024_case(out_path)
-

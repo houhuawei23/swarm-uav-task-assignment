@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import random
 import numpy as np
 
-
+from framework.base import Point
 from framework import *
 
 
@@ -36,8 +36,31 @@ class AutoUAV(UAV):
     coalition_manager: CoalitionManager = field(default=None, init=False)
     hyper_params: HyperParams = field(default=None, init=False)
 
-    uav_update_step_dict: Dict[int, int] = field(default_factory=dict, init=False)
+    uav_update_step_dict: Dict[int, int] = field(default=None, init=False)
     changed: bool = field(default=False, init=False)
+
+    def __init__(
+        self,
+        id: int,
+        position: Point,
+        resources: List[float] | List[float] | np.ndarray,
+        value: float,
+        max_speed: float,
+        mass: float | None = 1.0,
+        fly_energy_per_time: float = random.uniform(1, 3),
+        hover_energy_per_time: float = random.uniform(1, 3),
+    ):
+        super().__init__(
+            id,
+            position,
+            resources,
+            value,
+            max_speed,
+            mass,
+            fly_energy_per_time,
+            hover_energy_per_time,
+        )
+        
 
     def __post_init__(self):
         super().__post_init__()
@@ -141,7 +164,19 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 
 
-def get_connected_components(uav_list: List[UAV], comm_distance: float) -> List[List[int]]:
+def get_connected_components(distance_matrix: np.ndarray, comm_distance: float) -> List[List[int]]:
+    neighbor_mask = distance_matrix < comm_distance
+    neighbor_distance_matrix = distance_matrix * neighbor_mask
+
+    graph = csr_matrix(neighbor_distance_matrix)
+    n_components, labels = connected_components(graph, directed=False)
+    components = [[] for _ in range(n_components)]
+    for idx, label in enumerate(labels):
+        components[label].append(idx)
+    return components
+
+
+def get_connected_components_old(uav_list: List[UAV], comm_distance: float) -> List[List[int]]:
     uav_nums = len(uav_list)
     distance_matrix = np.zeros((uav_nums, uav_nums))
     for ridx in range(uav_nums):
@@ -160,6 +195,23 @@ def get_connected_components(uav_list: List[UAV], comm_distance: float) -> List[
         components[label].append(uav_list[uav_idx].id)
     # return components, by uav.id, not uav in list index
     return components
+
+
+def get_connected_components_uavid(uav_list: List[UAV], comm_distance: float) -> List[List[int]]:
+    uav_nums = len(uav_list)
+    distance_matrix = np.zeros((uav_nums, uav_nums))
+    for ridx in range(uav_nums):
+        for cidx in range(uav_nums):
+            distance_matrix[ridx, cidx] = uav_list[ridx].position.distance_to(
+                uav_list[cidx].position
+            )
+    components_in_idx = get_connected_components(distance_matrix, comm_distance)
+    components_in_uav_id = []
+    for component_in_idx in components_in_idx:
+        component_in_uav_id = [uav_list[idx].id for idx in component_in_idx]
+        components_in_uav_id.append(component_in_uav_id)
+
+    return components_in_uav_id
 
 
 class ICRA2024_CoalitionFormationGame(MRTASolver):
@@ -247,7 +299,7 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
         communication_distance = 15
 
         uav_list = self.uav_manager.get_all()
-        components = get_connected_components(uav_list, communication_distance)
+        components = get_connected_components_uavid(uav_list, communication_distance)
         print(f"components: {components}")
 
         self.init_allocate(components)
@@ -276,7 +328,7 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
                     uav.receive_and_update(messages)
                 component_changed = any(msg.changed for msg in messages)
                 total_changed = total_changed or component_changed
-            
+
             print(f"total_changed: {total_changed}")
             if not total_changed:
                 print("all uav not changed, break!")

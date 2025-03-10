@@ -1,11 +1,11 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 from dataclasses import dataclass, field
 
 import random
 import numpy as np
 
 
-from .base import Point, Entity, EntityManager
+from .base import Point, Entity, EntityManager, GenParams
 
 
 default_execution_time = 2
@@ -29,20 +29,47 @@ class Task(Entity):
     time_window: List  # 时间窗口 [min_start, max_start]
     threat: float  # 威胁指数
 
-    execution_time: int = field(default=default_execution_time)  # 任务执行时间
-    resources_nums: int = field(default=0, init=False)  # 资源数量
+    execution_time: int  # 任务执行时间
+    resources_nums: int  # 资源数量
+
+    def __init__(
+        self,
+        id: int,
+        position: Point,
+        required_resources: List,
+        time_window: List,
+        threat: float,
+        execution_time: float = default_execution_time,
+    ):
+        super().__init__(id, position)
+        self.required_resources = np.array(required_resources)
+        self.resources_nums = len(self.required_resources)
+        self.time_window = time_window
+        self.threat = threat
+        assert execution_time is not None
+        self.execution_time = execution_time
 
     def __post_init__(self):
         super().__post_init__()
-        self.required_resources = np.array(self.required_resources)
-        self.resources_nums = len(self.required_resources)
+        # self.required_resources = np.array(self.required_resources)
+        # self.resources_nums = len(self.required_resources)
+
+    def __eq__(self, other: "Task"):
+        return (
+            self.id == other.id
+            and np.all(self.position.xyz == other.position.xyz)
+            and np.all(self.required_resources == other.required_resources)
+            and self.time_window == other.time_window
+            and self.threat == other.threat
+            and self.execution_time == other.execution_time
+        )
 
     def to_dict(self):
         return {
             "id": self.id,
             "required_resources": self.required_resources.tolist(),
             "position": self.position.tolist(),
-            "time_windbeow": self.time_window,
+            "time_window": self.time_window,
             "threat": self.threat,
             "execution_time": self.execution_time,
         }
@@ -55,16 +82,17 @@ class Task(Entity):
             position=data["position"],
             time_window=data["time_window"],
             threat=data["threat"],
-            execution_time=data["execution_time"]
-            if data.get("execution_time") is not None
-            else random.uniform(1, 3),
+            # execution_time=data["execution_time"],
+            # if data.get("execution_time") is not None
+            # else random.uniform(1, 3),
+            execution_time=data.get("execution_time", random.uniform(1, 3)),
         )
 
     def brief_info(self) -> str:
         return (
             f"T_{self.id}(req={self.required_resources}, tw={self.time_window}, thr={self.threat})"
         )
-    
+
     def is_zero_task(self):
         return self.id == 0
 
@@ -93,56 +121,42 @@ class TaskManager(EntityManager):
             print(f"  {task}")
 
 
+@dataclass
+class TaskGenParams(GenParams):
+    required_resources_range: Tuple[float, float] = field(default=(1, 3))
+    time_window_ranges: List[Tuple[float, float]] = field(
+        default_factory=lambda: [(0, 10), (15, 20)]
+    )
+    threat_range: Tuple[float, float] = field(default=(0.25, 0.75))
+    execution_time_range: Tuple[float, float] = field(default=None)
+
+
+precision = 2
+
+
+# 生成 Task 数据
+def generate_tasks(num_tasks: int, params: TaskGenParams = TaskGenParams()):
+    tasks = []
+    for id in range(1, num_tasks + 1):
+        task = {
+            "id": id,
+            "required_resources": [
+                random.randint(*params.required_resources_range)
+                for _ in range(params.resources_num)
+            ],
+            "position": [
+                round(random.uniform(*a_range), precision) for a_range in params.region_ranges
+            ],
+            "time_window": [random.randint(*w_range) for w_range in params.time_window_ranges],
+            "threat": round(random.uniform(*params.threat_range), precision),
+        }
+        if params.execution_time_range is not None:
+            task["execution_time"] = random.randint(*params.execution_time_range)
+
+        tasks.append(task)
+    return tasks
+
+
 # Example usage:
 if __name__ == "__main__":
-    # Create some tasks
-    task1 = Task(
-        id=1,
-        required_resources=[5, 2, 3],
-        position=[10, 20, 0],
-        time_window=[0, 100],
-        threat=0.5,
-    )
-    task2 = Task(
-        id=2,
-        required_resources=[4, 5, 6],
-        position=[40, 50, 0],
-        time_window=[50, 150],
-        threat=0.7,
-    )
-
-    # Initialize TaskManager with a list of tasks
-    task_manager = TaskManager(tasks=[task1, task2])
-
-    # Add a new task
-    task3 = Task(
-        id=3,
-        required_resources=[7, 8, 9],
-        position=[70, 80, 0],
-        time_window=[100, 200],
-        threat=0.9,
-    )
-    task_manager.add(task3)
-
-    # Get a task by ID
-    print(task_manager.get(2))
-
-    # Delete a task by ID
-    task_manager.remove(1)
-
-    # Get all tasks
-    print(task_manager.get_all())
-
-    # Update a task
-    task2.required_resources = [10, 11, 12]
-    # task_manager.update_task(task2)
-
-    # Print all tasks
-    print(task_manager.get_all())
-
-    # Automatic detection (will show 3D because of task 3)
-    # task_manager.plot_distribution_beta("2d")
-
-    # Clear all tasks
-    # task_manager.clear_tasks()
-    print(task_manager.get_all())
+    pass

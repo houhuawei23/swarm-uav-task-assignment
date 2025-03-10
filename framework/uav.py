@@ -1,10 +1,10 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple, Type
 from dataclasses import dataclass, field
 
 import random
 import numpy as np
 
-from .base import Point, Entity, EntityManager
+from .base import Point, Entity, EntityManager, GenParams
 
 
 @dataclass(init=True, repr=True)
@@ -29,9 +29,39 @@ class UAV(Entity):
     fly_energy_per_time: float  # 飞行能耗 per time, per mass
     hover_energy_per_time: float  # 悬停能耗 per time, per mass
 
+    def __init__(
+        self,
+        id: int,
+        position: Point,
+        resources: List[float],
+        value: float,
+        max_speed: float,
+        mass: float | None = 1.0,
+        fly_energy_per_time: float = random.uniform(1, 3),
+        hover_energy_per_time: float = random.uniform(1, 3),
+    ):
+        super().__init__(id, position)
+        self.resources = np.array(resources)
+        self.value = value
+        self.max_speed = max_speed
+        self.mass = mass if mass is not None else 1.0
+        self.fly_energy_per_time = fly_energy_per_time
+        self.hover_energy_per_time = hover_energy_per_time
+
     def __post_init__(self):
         super().__post_init__()
-        self.resources = np.array(self.resources)
+
+    def __eq__(self, other: "UAV") -> bool:
+        return (
+            self.id == other.id
+            and np.all(self.position.xyz == other.position.xyz)
+            and np.all(self.resources == other.resources)
+            and self.value == other.value
+            and self.max_speed == other.max_speed
+            and self.mass == other.mass
+            and self.fly_energy_per_time == other.fly_energy_per_time
+            and self.hover_energy_per_time == other.hover_energy_per_time
+        )
 
     def to_dict(self):
         return {
@@ -54,13 +84,9 @@ class UAV(Entity):
             position=data["position"],
             value=data["value"],
             max_speed=data["max_speed"],
-            mass=data["mass"] if data.get("mass") is not None else 1.0,
-            fly_energy_per_time=data["fly_energy_per_time"]
-            if data.get("fly_energy_per_time") is not None
-            else random.uniform(1, 3),
-            hover_energy_per_time=data["hover_energy_per_time"]
-            if data.get("hover_energy_per_time") is not None
-            else random.uniform(1, 3),
+            mass=data.get("mass", random.randint(1, 3)),
+            fly_energy_per_time=data.get("fly_energy_per_time", random.uniform(1, 3)),
+            hover_energy_per_time=data.get("hover_energy_per_time", random.uniform(1, 3)),
         )
 
     def brief_info(self) -> str:
@@ -75,9 +101,6 @@ class UAV(Entity):
 
     def cal_hover_energy(self, hover_time: float) -> float:
         return self.mass * hover_time * self.hover_energy_per_time
-
-
-from typing import Type
 
 
 @dataclass
@@ -102,35 +125,45 @@ class UAVManager(EntityManager):
             print(f"  {uav}")
 
 
-# Example usage:
+precision = 2
+
+
+@dataclass
+class UAVGenParams(GenParams):
+    resources_range: Tuple[float, float] = field(default=(1, 10))
+    value_range: Tuple[float, float] = field(default=(1, 10))
+    speed_range: Tuple[float, float] = field(default=(1, 10))
+
+    uav_mass_range: Tuple[float, float] = field(default=None)
+    fly_energy_per_time_range: Tuple[float, float] = field(default=None)
+    hover_energy_per_time_range: Tuple[float, float] = field(default=None)
+    comm_bandwidth_range: Tuple[float, float] = field(default=None)
+    trans_power_range: Tuple[float, float] = field(default=None)
+
+
+def generate_uavs(num_uavs: int, params: UAVGenParams = UAVGenParams()):
+    uavs = []
+    for id in range(1, num_uavs + 1):
+        uav = {
+            "id": id,
+            "resources": [
+                random.randint(*params.resources_range) for _ in range(params.resources_num)
+            ],
+            "position": [
+                round(random.uniform(*a_range), precision) for a_range in params.region_ranges
+            ],
+            "value": random.randint(*params.value_range),
+            "max_speed": random.randint(*params.speed_range),
+        }
+        if params.uav_mass_range is not None:
+            uav["mass"] = random.randint(*params.uav_mass_range)
+        if params.fly_energy_per_time_range is not None:
+            uav["fly_energy_per_time"] = random.randint(*params.fly_energy_per_time_range)
+        if params.hover_energy_per_time_range is not None:
+            uav["hover_energy_per_time"] = random.randint(*params.hover_energy_per_time_range)
+        uavs.append(uav)
+    return uavs
+
+
 if __name__ == "__main__":
-    # Create UAVs
-    uav1 = UAV(id=1, resources=[2, 3], position=[0, 0, 0], value=1.5, max_speed=10)
-    uav2 = UAV(id=2, resources=[4, 1], position=[5, 5, 5], value=2.0, max_speed=15)
-
-    # Initialize manager
-    manager = UAVManager([uav1, uav2])
-
-    # Add new UAV
-    uav3 = UAV(id=3, resources=[5, 2], position=[10, 0, 5], value=1.8, max_speed=12)
-    # manager.add_uav(uav3)
-
-    # # Get UAV by ID
-    # print(manager.get_uav_by_id(2))
-
-    # # Update UAV
-    # uav2.position = [8, 8, 8]
-    # manager.update_uav(uav2)
-
-    # # Delete UAV
-    # manager.delete_uav_by_id(1)
-
-    # # List all UAVs
-    # print(manager.get_all_uavs())
-
-    # # Plot distribution
-    # # manager.plot_distribution()
-
-    # # Clear all UAVs
-    # manager.clear_uavs()
-    # print(manager.get_all_uavs())
+    pass

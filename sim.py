@@ -16,7 +16,7 @@ from framework import (
 from framework.utils import *
 
 from solvers import (
-    EnumerationAlgorithm,
+    EnumerationSolver,
     IROS2024_CoalitionFormationGame,
     ICRA2024_CoalitionFormationGame,
     ChinaScience2024_CoalitionFormationGame,
@@ -55,7 +55,7 @@ def run_solver(
             uav_manager, task_manager, coalition_manager, hyper_params
         )
     elif cmd_args.choice == "enum":
-        solver = EnumerationAlgorithm(uav_manager, task_manager, coalition_manager, hyper_params)
+        solver = EnumerationSolver(uav_manager, task_manager, coalition_manager, hyper_params)
     else:
         raise ValueError("Invalid choice")
 

@@ -84,6 +84,8 @@ def calculate_resource_use_rate(
         all_input_resources += obtained
         unused_resources += np.maximum(obtained - task.required_resources, 0)
 
+    if np.sum(all_input_resources) == 0:
+        return 0
     return (1 - np.sum(unused_resources) / np.sum(all_input_resources)).item()
 
 
@@ -103,7 +105,7 @@ def evaluate_assignment(
     return EvaluationResult(completion_rate, resource_use_rate)
 
 
-def format_json(json_file_path):
+def format_json(json_file_path, config_path=".prettierrc"):
     try:
         # 调用 Prettier 命令行工具
         subprocess.run(["prettier", "--write", json_file_path], check=True)
@@ -117,8 +119,8 @@ def format_json(json_file_path):
 def save_uavs_and_tasks(uav_manager: UAVManager, task_manager: TaskManager, output_file_path):
     # 将 UAVManager 和 TaskManager 的信息存储为 JSON 文件
     data = {
-        "uavs": uav_manager.to_dict(),
-        "tasks": task_manager.to_dict(),
+        "uavs": uav_manager.to_dict_list(),
+        "tasks": task_manager.to_dict_list(),
     }
 
     with open(output_file_path, "w") as f:

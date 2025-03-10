@@ -80,7 +80,7 @@ def calcualte_assignment_score(
     return score
 
 
-class EnumerationAlgorithm(MRTASolver):
+class EnumerationSolver(MRTASolver):
     """
     Implements an enumeration (brute-force) algorithm for task assignment.
     This algorithm checks all possible combinations of UAVs and tasks.

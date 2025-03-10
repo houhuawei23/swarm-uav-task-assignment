@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from .base import HyperParams
 from .uav import UAVManager
 from .task import TaskManager
-from .coalition import CoalitionManager
+from .coalition_manager import CoalitionManager
 
 
 @dataclass

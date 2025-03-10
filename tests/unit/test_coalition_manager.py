@@ -1,0 +1,69 @@
+from framework.uav import UAV, UAVManager, generate_uavs
+from framework.task import Task, TaskManager, generate_tasks
+from framework.coalition_manager import CoalitionManager
+from framework import HyperParams
+from framework.utils import calculate_map_shape
+# from test_uav_task import get_tasks, get_uavs
+
+
+def test_coalition_manager():
+    uavs = generate_uavs(3)
+    tasks = generate_tasks(3)
+    uav_manager = UAVManager.from_dict(uavs)
+    task_manager = TaskManager.from_dict(tasks)
+    uavs = uav_manager.get_all()
+    tasks = task_manager.get_all()
+    uav_manager.format_print()
+    task_manager.format_print()
+    hyper_params = HyperParams(
+        resources_num=3,
+        map_shape=calculate_map_shape(uav_manager, task_manager),
+        alpha=1.0,
+        beta=10.0,
+        gamma=0.05,
+        mu=-1.0,
+        max_iter=25,
+    )
+    coalition_manager = CoalitionManager(uav_manager.get_ids(), task_manager.get_ids())
+    # coalition_manager.plot_map(uav_manager, task_manager, hyper_params, ".coalition.png")
+    # coalition_manager.format_print()
+    # 测试初始状态
+    assert coalition_manager.get_unassigned_uav_ids() == [1, 2, 3]
+    assert coalition_manager.get_coalition(1) == []
+    assert coalition_manager.get_coalition(2) == []
+
+    # 测试分配 UAV 到任务
+    uav1 = uav_manager.get(1)
+    task1 = task_manager.get(1)
+    coalition_manager.assign(uav1.id, task1.id)
+    assert coalition_manager.get_coalition(task1.id) == [uav1.id]
+    assert coalition_manager.get_uav2task()[uav1.id] == task1.id
+    assert coalition_manager.get_unassigned_uav_ids() == [2, 3]
+    # coalition_manager.format_print()
+
+    # 测试更新分配
+    new_assignment = {1: [1], 2: [3], 3: [], None: [2]}
+    coalition_manager.update_from_assignment(new_assignment, uav_manager)
+    assert coalition_manager.get_coalition(1) == [1]
+    assert coalition_manager.get_coalition(2) == [3]
+    # print(f"dd: {coalition_manager.get_unassigned_uav_ids()}")
+    assert coalition_manager.get_unassigned_uav_ids() == [2]
+    # coalition_manager.format_print()
+
+    # 测试合并 CoalitionManager
+    another_coalition_manager = CoalitionManager(
+        [uav.id for uav in uavs], [task.id for task in tasks]
+    )
+    another_coalition_manager.assign(2, 1)
+    # print(another_coalition_manager.get_task2coalition())
+    coalition_manager.merge_coalition_manager(another_coalition_manager)
+    assert coalition_manager.get_coalition(1) == [1, 2]
+    assert coalition_manager.get_unassigned_uav_ids() == []
+
+    # 测试未分配的 UAV
+    coalition_manager.unassign(1)
+    assert coalition_manager.get_unassigned_uav_ids() == [1]
+
+    # 测试获取任务 ID
+    assert coalition_manager.get_taskid_by_uavid(2) == 1
+    assert coalition_manager.get_taskid_by_uavid(1) is None

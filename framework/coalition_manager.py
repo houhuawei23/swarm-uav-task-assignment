@@ -29,17 +29,17 @@ class CoalitionManager:
 
         self.task2coalition = assignment
 
-        assigned_uavs = []
         for task_id, uav_ids in assignment.items():
-            if task_id is None:
-                print(f"assignment: {assignment}")
-                raise Exception("Task id cannot be None in the given assignment")
             for uav_id in uav_ids:
-                assigned_uavs.append(uav_id)
-                # update uav2task
                 self.uav2task[uav_id] = task_id
-        # not assigned uavs
-        self.task2coalition[None] = list(set(uav_manager.get_ids()) - set(assigned_uavs))
+        #     if task_id is not None:
+        #         for uav_id in uav_ids:
+        #             assigned_uavs.append(uav_id)
+        #             # update uav2task
+        #             self.uav2task[uav_id] = task_id
+
+        # # not assigned uavs
+        # self.task2coalition[None] = list(set(uav_manager.get_ids()) - set(assigned_uavs))
 
     def assign(self, uav_id: int, task_id: int | None):
         """Assigns a UAV to a task, updating the coalitions dictionary.
@@ -52,17 +52,11 @@ class CoalitionManager:
 
         # print(f"Assigning u{uav_id} to t{task_id}")
         if self.uav2task[uav_id] is not None:
-            print(
-                "Error: UAV {} has already been assigned to task {}".format(
-                    uav_id, self.uav2task[uav_id]
-                )
-            )
+            print(f"Error: UAV {uav_id} has already been assigned to task {self.uav2task[uav_id]}")
             raise Exception(
-                "UAV {} has already been assigned to task {}".format(uav_id, self.uav2task[uav_id])
+                f"UAV {uav_id} has already been assigned to task {self.uav2task[uav_id]}"
             )
         self.task2coalition[task_id].append(uav_id)
-        # self.task_obtained_resources[task_id] += uav.resources
-        # print(self.coalitions)
         self.task2coalition[None].remove(uav_id)
         self.uav2task[uav_id] = task_id
 
@@ -71,16 +65,38 @@ class CoalitionManager:
         task_id = self.uav2task[uav_id]
         print(f"Unassigning u{uav_id} from t{task_id}")
         if task_id is None:
-            print("Warning: UAV {} is not assigned to any task".format(uav_id))
+            print(f"Warning: UAV {uav_id} is not assigned to any task")
         else:
             self.task2coalition[task_id].remove(uav_id)
-            # self.task_obtained_resources[task_id] -= uav.resources
             self.task2coalition[None].append(uav_id)
             self.uav2task[uav_id] = None
 
     def merge_coalition_manager(self, cmana: "CoalitionManager"):
+        """
+        1. cmana.uav2task[uavid] == self.uav2task[uav_id]: pass
+        2. cmana.uav2task[uavid] != self.uav2task[uav_id]:
+            2.1 cmana.uav2task[uavid] is None, self.uav2task[uav_id] is not None
+            2.2 cmana.uav2task[uavid] is not None, self.uav2task[uav_id] is None
+            2.3 cmana.uav2task[uavid] is not None, self.uav2task[uav_id] is not None
+
+        """
+        print(f"self: {self.uav2task}")
+        print(f"self: {self.task2coalition}")
+        print(f"cmana: {cmana.uav2task}")
+        print(f"cmana: {cmana.task2coalition}")
         for uav_id, task_id in cmana.get_uav2task().items():
-            self.assign(uav_id, task_id)
+            # if task_id is None and self.uav2task[uav_id] is not None:
+            if task_id == self.uav2task[uav_id]:
+                continue
+            # task_id != self.uav2task[uav_id]
+            if (task_id is None) and (self.uav2task[uav_id] is not None):
+                # self.assign(uav_id, task_id)
+                continue
+            elif (task_id is not None) and (self.uav2task[uav_id] is None):
+                self.assign(uav_id, task_id)
+            else: # (task_id is not None) and (self.uav2task[uav_id] is not None):
+                raise Exception("Cannot merge coalition managers with conflicting assignments")
+
 
     def get_unassigned_uav_ids(self) -> List[int]:
         return self.task2coalition[None]
@@ -103,6 +119,10 @@ class CoalitionManager:
     def __str__(self):
         return str(self.task2coalition)
 
+    def format_print(self):
+        print(f"task2coalition: {self.task2coalition}")
+        print(f"uav2task: {self.uav2task}")
+
     def plot_coalition(
         self,
         ax: plt.Axes,
@@ -111,7 +131,6 @@ class CoalitionManager:
         uav_manager: UAVManager,
         task_manager: TaskManager,
     ):
-        text_delta = 0.2  # 文本偏移量
         task = task_manager.get(task_id)
         # Draw a circle around UAVs in the same coalition
         if len(coalition) > 1:
@@ -216,27 +235,4 @@ class CoalitionManager:
 
 
 if __name__ == "__main__":
-    resources_num = 2
-    map_shape = (20, 20, 0)
-    gamma = 0.1
-
-    # 初始化无人机
-    uav1 = UAV(1, [5, 3], [0, 0, 0], 10, 20)
-    uav2 = UAV(2, [3, 4], [10, 10, 0], 15, 25)
-    uav3 = UAV(3, [2, 5], [20, 20, 0], 20, 30)
-    uavs = [uav1, uav2, uav3]
-    uav_manager = UAVManager(uavs)
-    # 初始化任务
-    task1 = Task(4, [4, 2], [5, 5, 0], [0, 100], 0.5)
-    task2 = Task(5, [3, 3], [15, 15, 0], [0, 100], 0.7)
-    tasks = [task1, task2]
-    task_manager = TaskManager(tasks)
-
-    assignment = {
-        4: [1, 2],
-        5: [3],
-    }
-
-    coalition_set = CoalitionManager(uav_manager.get_ids(), task_manager.get_ids())
-
-    # coalition_set.plot_map(uav_manager, task_manager)
+    pass

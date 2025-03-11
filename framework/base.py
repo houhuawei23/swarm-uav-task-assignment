@@ -148,6 +148,9 @@ class EntityManager:
         # which one is better?
         return random.choice(list(self.entities.values()))
 
+    def brief_info(self):
+        return str(self.get_ids())
+
 
 @dataclass(repr=True)
 class HyperParams:

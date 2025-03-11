@@ -1,6 +1,16 @@
 # Repotitory for Swarm UAV Task Assignment
 
-- try to implement the algorithm in the [paper](https://doi.org/10.1360/ssi-2024-0167).
+## TODO
+
+- [x] implement the algorithm in the [csci2024@薛舒心](https://doi.org/10.1360/ssi-2024-0167), `./solvers/csci.py`
+  - [x] add time constraints
+  - [ ] uavs and tasks cluster
+- [x] fix bugs in CoalitionFormationGame task assignment algorithm.
+- [x] Calculate various evaluation indicators, such as:
+  - task completion rate, and resource use rate
+- [x] Implement algorithm in [iros2024@LiwangZhang](https://doi.org/10.1109/IROS58592.2024.10801429), `./solvers/iros.py`
+- [x] Implement algorithm in [icra2024@LiwangZhang](https://doi.org/10.1109/ICRA57147.2024.10611476), `./solvers/icra.py`
+- Warning: iros2024@LiwangZhang and icra2024@LiwangZhang both need random sample in trigger uav stage! Otherwise, the alg may be vibrate and stuck in a deadlock.
 
 ## Show Cases
 
@@ -86,17 +96,6 @@ TaskManager with 2 tasks.
 icra Result: {1: [1], 2: [3], None: [2]}
 Eval Result: EvaluationResult(completion_rate=0.5, resource_use_rate=0.7333333333333334)
 ```
-
-## TODO
-
-- [x] implement the algorithm in the [csci2024@薛舒心](https://doi.org/10.1360/ssi-2024-0167), `./solvers/csci.py`
-  - [x] add time constraints
-  - [ ] uavs and tasks cluster
-- [x] fix bugs in CoalitionFormationGame task assignment algorithm.
-- [x] Calculate various evaluation indicators, such as:
-  - task completion rate, and resource use rate
-- [x] Implement algorithm in [iros2024@LiwangZhang](https://doi.org/10.1109/IROS58592.2024.10801429), `./solvers/iros.py`
-- [x] Implement algorithm in [icra2024@LiwangZhang](https://doi.org/10.1109/ICRA57147.2024.10611476), `./solvers/icra.py`
 
 ## Project Structure
 

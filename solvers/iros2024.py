@@ -205,7 +205,9 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
             self.coalition_manager.assign(uav.id, task_id)
 
         iter_cnt = 0
-        sample_size = 3
+        default_sample_size = 3
+        rec_sample_size = max(1, self.uav_manager.size() // 2)
+        sample_size = min(default_sample_size, rec_sample_size)
         while True:
             print(f"iter {iter_cnt}")
             if iter_cnt > self.hyper_params.max_iter:
@@ -213,8 +215,10 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
                 break
             # each iter randomly sample some uavs,
             # check whether they are stable (based on game theory stability)
+            # Warning: if not random sample, may be deadlock!!! vibrate!!!
             sampled_uavs = random.sample(self.uav_manager.get_all(), sample_size)
             changed = self.allocate_once(sampled_uavs, debug=debug)
+            # changed = self.allocate_once(self.uav_manager.get_all(), debug=debug)
             if not changed:
                 iter_cnt += 1
                 print("unchanged")

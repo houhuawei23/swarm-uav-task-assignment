@@ -80,10 +80,10 @@ class CoalitionManager:
             2.3 cmana.uav2task[uavid] is not None, self.uav2task[uav_id] is not None
 
         """
-        print(f"self: {self.uav2task}")
-        print(f"self: {self.task2coalition}")
-        print(f"cmana: {cmana.uav2task}")
-        print(f"cmana: {cmana.task2coalition}")
+        # print(f"self: {self.uav2task}")
+        # print(f"self: {self.task2coalition}")
+        # print(f"cmana: {cmana.uav2task}")
+        # print(f"cmana: {cmana.task2coalition}")
         for uav_id, task_id in cmana.get_uav2task().items():
             # if task_id is None and self.uav2task[uav_id] is not None:
             if task_id == self.uav2task[uav_id]:
@@ -122,6 +122,11 @@ class CoalitionManager:
     def format_print(self):
         print(f"task2coalition: {self.task2coalition}")
         print(f"uav2task: {self.uav2task}")
+
+    def brief_info(self):
+        info = f"task2coalition: {self.task2coalition}, "
+        info += f"uav2task: {self.uav2task}"
+        return info
 
     def plot_coalition(
         self,

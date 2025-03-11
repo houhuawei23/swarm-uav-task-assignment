@@ -17,6 +17,7 @@ class Message:
 
 
 from .iros2024 import cal_uav_utility_in_colition
+from copy import deepcopy
 
 
 @dataclass
@@ -43,7 +44,7 @@ class AutoUAV(UAV):
         self,
         id: int,
         position: Point,
-        resources: List[float] | List[float] | np.ndarray,
+        resources: List[float] | np.ndarray,
         value: float,
         max_speed: float,
         mass: float | None = 1.0,
@@ -60,7 +61,6 @@ class AutoUAV(UAV):
             fly_energy_per_time,
             hover_energy_per_time,
         )
-        
 
     def __post_init__(self):
         super().__post_init__()
@@ -81,9 +81,9 @@ class AutoUAV(UAV):
         msg = Message(
             uav_id=self.id,
             changed=self.changed,
-            uav_update_step_dict=self.uav_update_step_dict.copy(),
-            task2coalition=self.coalition_manager.get_task2coalition().copy(),
-            uav2task=self.coalition_manager.get_uav2task().copy(),
+            uav_update_step_dict=deepcopy(self.uav_update_step_dict),
+            task2coalition=deepcopy(self.coalition_manager.get_task2coalition()),
+            uav2task=deepcopy(self.coalition_manager.get_uav2task()),
         )
         return msg
 
@@ -93,14 +93,14 @@ class AutoUAV(UAV):
         """
         receive_changed = False
         for msg in msgs:
-            print(f"msg: {msg}")
+            # print(f"msg: {msg}")
             for uav_id in self.uav_manager.get_ids():
                 if self.uav_update_step_dict[uav_id] < msg.uav_update_step_dict[uav_id]:
                     self.coalition_manager.unassign(uav_id)
                     self.coalition_manager.assign(uav_id, msg.uav2task[uav_id])
                     self.uav_update_step_dict[uav_id] = msg.uav_update_step_dict[uav_id]
                     receive_changed = True
-                    print(f"receive_changed: {receive_changed}")
+                    # print(f"receive_changed: {receive_changed}")
         self.changed = self.changed or receive_changed
         return receive_changed
 
@@ -116,7 +116,7 @@ class AutoUAV(UAV):
                 continue
 
             if taski_id is None:
-                taski = None
+                # taski = None
                 ui = 0
             else:
                 taski = self.task_manager.get(taski_id)
@@ -132,7 +132,7 @@ class AutoUAV(UAV):
                 )
 
             if taskj_id is None:
-                taskj = None
+                # taskj = None
                 uj = 0
             else:
                 taskj = self.task_manager.get(taskj_id)
@@ -151,13 +151,25 @@ class AutoUAV(UAV):
             if ui < uj:
                 # uav leave taski, join taskj
                 self.coalition_manager.unassign(self.id)
-                self.coalition_manager.assign(self.id, taskj.id if taskj is not None else None)
+                self.coalition_manager.assign(self.id, taskj_id)
                 divert_changed = True
                 self.uav_update_step_dict[self.id] += 1
-                print(f"uav: {self.id}, divert_changed: {divert_changed}")
+                # print(f"uav: {self.id}, divert_changed: {divert_changed}")
         self.changed = self.changed or divert_changed
-        print(f"[divert] uav: {self.id}, changed: {self.changed}")
+        # print(f"[divert] uav: {self.id}, changed: {self.changed}")
         return divert_changed
+
+    def brief_info(self):
+        info = f"AU_{self.id}(re={self.resources}, val={self.value}, spd={self.max_speed})"
+        return info
+
+    def debug_info(self):
+        info = f"AU_{self.id}(re={self.resources}, pos={self.position.tolist()}, val={self.value}, spd={self.max_speed})\n"
+        info += f"  uavs: {self.uav_manager.brief_info()}\n"
+        info += f"  tsks: {self.task_manager.brief_info()}\n"
+        info += f"  coalitoin: {self.coalition_manager.brief_info()}\n"
+        info += f"  update_dict: {self.uav_update_step_dict}\n"
+        return info
 
 
 from scipy.sparse import csr_matrix
@@ -296,13 +308,17 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
         每个uav是独立的个体，自己运行一套算法。
         中控模拟程序只需要触发每个uav的动作，模拟uav之间的通信等。
         """
-        communication_distance = 15
-
+        # comm_distance = self.hyper_params.comm_distance
+        comm_distance = self.hyper_params.map_shape[0] / 3
         uav_list = self.uav_manager.get_all()
-        components = get_connected_components_uavid(uav_list, communication_distance)
+        components = get_connected_components_uavid(uav_list, comm_distance)
         print(f"components: {components}")
 
         self.init_allocate(components)
+        if debug:
+            for uav in uav_list:
+                print(uav.debug_info())
+
         iter_cnt = 0
 
         while True:  # sim step
@@ -312,24 +328,35 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
                 break
 
             total_changed = False
-
+            default_sample_size = 3
             for component in components:
+                # Warning: if not random sample, may be deadlock!!! vibrate!!!
+                rec_sample_size = max(1, len(component) // 2)
+                sampled_uavids = random.sample(
+                    component, k=min(default_sample_size, rec_sample_size)
+                )
                 messages: List[Message] = []
                 component_changed = False
-                for uav_id in component:
+                # for uav_id in component:
+                for uav_id in sampled_uavids:
                     uav: AutoUAV = self.uav_manager.get(uav_id)
                     uav.changed = False
                     uav.try_divert()
                     msg = uav.send_msg()
                     messages.append(msg)
+                    if debug:
+                        print(uav.debug_info())
 
                 for uav_id in component:
                     uav: AutoUAV = self.uav_manager.get(uav_id)
                     uav.receive_and_update(messages)
+                    if debug:
+                        print(uav.debug_info())
+
                 component_changed = any(msg.changed for msg in messages)
                 total_changed = total_changed or component_changed
 
-            print(f"total_changed: {total_changed}")
+            # print(f"total_changed: {total_changed}")
             if not total_changed:
                 print("all uav not changed, break!")
                 break

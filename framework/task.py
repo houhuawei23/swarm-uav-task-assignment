@@ -135,7 +135,7 @@ precision = 2
 
 
 # 生成 Task 数据
-def generate_tasks(num_tasks: int, params: TaskGenParams = TaskGenParams()):
+def generate_task_dict_list(num_tasks: int, params: TaskGenParams = TaskGenParams()):
     tasks = []
     for id in range(1, num_tasks + 1):
         task = {
@@ -155,6 +155,10 @@ def generate_tasks(num_tasks: int, params: TaskGenParams = TaskGenParams()):
 
         tasks.append(task)
     return tasks
+
+
+def generate_task_list(num_tasks: int, params: TaskGenParams = TaskGenParams()):
+    return [Task.from_dict(task_data) for task_data in generate_task_dict_list(num_tasks, params)]
 
 
 # Example usage:

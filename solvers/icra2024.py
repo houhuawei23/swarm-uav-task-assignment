@@ -20,7 +20,7 @@ from .iros2024 import cal_uav_utility_in_colition
 from copy import deepcopy
 
 
-@dataclass
+# @dataclass
 class AutoUAV(UAV):
     """
     r(tj, Sj^ck) = vj * log(min(wj^ck, |Sj^ck|) + e, wj^ck)
@@ -32,13 +32,13 @@ class AutoUAV(UAV):
 
     # 知道自己的临近无人机的id uav_ids => 知道临近uav的所有信息
     # 知道全局的任务(包括任务信息)
-    uav_manager: UAVManager = field(default=None, init=False)
-    task_manager: TaskManager = field(default=None, init=False)
-    coalition_manager: CoalitionManager = field(default=None, init=False)
-    hyper_params: HyperParams = field(default=None, init=False)
+    # uav_manager: UAVManager = field(default=None, init=False)
+    # task_manager: TaskManager = field(default=None, init=False)
+    # coalition_manager: CoalitionManager = field(default=None, init=False)
+    # hyper_params: HyperParams = field(default=None, init=False)
 
-    uav_update_step_dict: Dict[int, int] = field(default=None, init=False)
     changed: bool = field(default=False, init=False)
+    uav_update_step_dict: Dict[int, int] = field(default=None, init=False)
 
     def __init__(
         self,
@@ -111,7 +111,7 @@ class AutoUAV(UAV):
         task_ids.append(None)  # special, None means no task
         divert_changed = False
         for taskj_id in task_ids:
-            taski_id = self.coalition_manager.get_taskid_by_uavid(self.id)
+            taski_id = self.coalition_manager.get_taskid(self.id)
             if taski_id == taskj_id:
                 continue
 

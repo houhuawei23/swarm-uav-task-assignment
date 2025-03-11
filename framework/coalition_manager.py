@@ -24,22 +24,12 @@ class CoalitionManager:
         self.uav2task = {uav_id: None for uav_id in uav_ids}
 
     def update_from_assignment(self, assignment: Dict[int, List[int]], uav_manager: UAVManager):
-        # self.task2coalition.clear()
-        self.uav2task.clear()
-
         self.task2coalition = assignment
+        self.uav2task.clear()
 
         for task_id, uav_ids in assignment.items():
             for uav_id in uav_ids:
                 self.uav2task[uav_id] = task_id
-        #     if task_id is not None:
-        #         for uav_id in uav_ids:
-        #             assigned_uavs.append(uav_id)
-        #             # update uav2task
-        #             self.uav2task[uav_id] = task_id
-
-        # # not assigned uavs
-        # self.task2coalition[None] = list(set(uav_manager.get_ids()) - set(assigned_uavs))
 
     def assign(self, uav_id: int, task_id: int | None):
         """Assigns a UAV to a task, updating the coalitions dictionary.
@@ -94,9 +84,8 @@ class CoalitionManager:
                 continue
             elif (task_id is not None) and (self.uav2task[uav_id] is None):
                 self.assign(uav_id, task_id)
-            else: # (task_id is not None) and (self.uav2task[uav_id] is not None):
+            else:  # (task_id is not None) and (self.uav2task[uav_id] is not None):
                 raise Exception("Cannot merge coalition managers with conflicting assignments")
-
 
     def get_unassigned_uav_ids(self) -> List[int]:
         return self.task2coalition[None]
@@ -104,17 +93,20 @@ class CoalitionManager:
     def get_coalition(self, task_id: int) -> List[int]:
         return self.task2coalition[task_id]
 
+    def get_taskid(self, uavid) -> int | None:
+        """
+        None means the UAV is not assigned to any task.
+        """
+        # assert uavid in self.uav2task.keys()
+        if uavid not in self.uav2task.keys():
+            raise Exception(f"UAV {uavid} is not in the coalition manager")
+        return self.uav2task[uavid]
+
     def get_task2coalition(self) -> Dict[int, List[int]]:
         return self.task2coalition
 
     def get_uav2task(self) -> Dict[int, int]:
         return self.uav2task
-
-    def get_taskid_by_uavid(self, uavid) -> int | None:
-        """
-        None means the UAV is not assigned to any task.
-        """
-        return self.uav2task[uavid]
 
     def __str__(self):
         return str(self.task2coalition)

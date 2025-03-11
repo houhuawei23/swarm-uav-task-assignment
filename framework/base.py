@@ -43,6 +43,10 @@ class Point:
     def distance_to(self, other: "Point") -> float:
         return np.linalg.norm(self.xyz - other.xyz)
 
+    def direction_to(self, other: "Point") -> np.ndarray:
+        delta = other.xyz - self.xyz
+        return delta / np.linalg.norm(delta)
+
     def tolist(self) -> List[float]:
         return self.xyz.tolist()
 
@@ -103,7 +107,6 @@ class EntityManager:
             self.entities = {}
         else:
             self.entities = {entity.id: entity for entity in entity_list}
-
 
     def add(self, entity: Entity):
         if entity.id in self.entities:

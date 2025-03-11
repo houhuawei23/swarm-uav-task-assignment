@@ -1,5 +1,5 @@
-from framework.uav import UAV, UAVManager, generate_uavs
-from framework.task import Task, TaskManager, generate_tasks
+from framework.uav import UAV, UAVManager, generate_uav_dict_list
+from framework.task import Task, TaskManager, generate_task_dict_list
 from framework.coalition_manager import CoalitionManager
 from framework import HyperParams
 from framework.utils import calculate_map_shape
@@ -7,8 +7,8 @@ from framework.utils import calculate_map_shape
 
 
 def test_coalition_manager():
-    uavs = generate_uavs(3)
-    tasks = generate_tasks(3)
+    uavs = generate_uav_dict_list(3)
+    tasks = generate_task_dict_list(3)
     uav_manager = UAVManager.from_dict(uavs)
     task_manager = TaskManager.from_dict(tasks)
     uavs = uav_manager.get_all()
@@ -65,5 +65,5 @@ def test_coalition_manager():
     assert coalition_manager.get_unassigned_uav_ids() == [1]
 
     # 测试获取任务 ID
-    assert coalition_manager.get_taskid_by_uavid(2) == 1
-    assert coalition_manager.get_taskid_by_uavid(1) is None
+    assert coalition_manager.get_taskid(2) == 1
+    assert coalition_manager.get_taskid(1) is None

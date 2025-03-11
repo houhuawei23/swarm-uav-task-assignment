@@ -92,6 +92,10 @@ class UAV(Entity):
     def brief_info(self) -> str:
         return f"U_{self.id}(re={self.resources}, val={self.value}, spd={self.max_speed})"
 
+    def debug_info(self):
+        info = f"AU_{self.id}(re={self.resources}, pos={self.position.tolist()}, val={self.value}, spd={self.max_speed})"
+        return info
+
     def cal_fly_energy(self, target_pos: Point) -> float:
         return (
             self.mass
@@ -102,6 +106,16 @@ class UAV(Entity):
     def cal_hover_energy(self, hover_time: float) -> float:
         return self.mass * hover_time * self.hover_energy_per_time
 
+    def move_to(self, target_pos: Point, time_step: float = 1.0):
+        distance = self.position.distance_to(target_pos)
+        if distance > 0:
+            direction_vec = self.position.direction_to(target_pos)
+            distance_inc = min(self.max_speed * time_step, distance)
+            self.position.xyz = self.position.xyz + direction_vec * distance_inc
+        else:
+            distance_inc = 0
+        return distance_inc
+
 
 @dataclass
 class UAVManager(EntityManager):
@@ -110,6 +124,9 @@ class UAVManager(EntityManager):
 
     def get(self, id: int) -> UAV:
         return super().get(id)
+
+    def get_all(self) -> List[UAV]:
+        return super().get_all()
 
     def random_one(self) -> UAV:
         return super().random_one()
@@ -141,7 +158,7 @@ class UAVGenParams(GenParams):
     trans_power_range: Tuple[float, float] = field(default=None)
 
 
-def generate_uavs(num_uavs: int, params: UAVGenParams = UAVGenParams()):
+def generate_uav_dict_list(num_uavs: int, params: UAVGenParams = UAVGenParams()) -> List[Dict]:
     uavs = []
     for id in range(1, num_uavs + 1):
         uav = {
@@ -163,6 +180,12 @@ def generate_uavs(num_uavs: int, params: UAVGenParams = UAVGenParams()):
             uav["hover_energy_per_time"] = random.randint(*params.hover_energy_per_time_range)
         uavs.append(uav)
     return uavs
+
+
+def generate_uav_list(
+    num_uavs: int, params: UAVGenParams = UAVGenParams(), UAVType: Type[UAV] = UAV
+) -> List[UAV]:
+    return [UAVType.from_dict(uav) for uav in generate_uav_dict_list(num_uavs, params)]
 
 
 if __name__ == "__main__":

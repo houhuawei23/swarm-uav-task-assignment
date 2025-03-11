@@ -151,7 +151,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
         task_ids.append(None)
         for uav in uav_list:
             for taskj_id in task_ids:  # try to divert to another task (not have None task)
-                taski_id = self.coalition_manager.get_taskid_by_uavid(uav.id)
+                taski_id = self.coalition_manager.get_taskid(uav.id)
                 if taski_id == taskj_id:  # taski == taskj, jump (may be both None)
                     continue
 

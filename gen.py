@@ -5,8 +5,8 @@ import random
 import argparse
 
 from framework.utils import format_json
-from framework.uav import UAVGenParams, generate_uavs
-from framework.task import TaskGenParams, generate_tasks
+from framework.uav import UAVGenParams, generate_uav_dict_list
+from framework.task import TaskGenParams, generate_task_dict_list
 from dataclasses import dataclass, field
 
 
@@ -58,8 +58,8 @@ def gen_iros2024_case(out_path):
     attenuation_factor = 3  # 衰减因子
     noise_power_range = [-60, -70]  # dBm
 
-    uavs = generate_uavs(num_uavs, uav_params)
-    tasks = generate_tasks(num_tasks, task_params)
+    uavs = generate_uav_dict_list(num_uavs, uav_params)
+    tasks = generate_task_dict_list(num_tasks, task_params)
     data = {
         "resources_num": resources_num,
         "num_uavs": num_uavs,
@@ -105,8 +105,8 @@ def gen_csci2024_data(out_path):
         threat_range=threat_range,
     )
     # generate_data(num_uavs=50, num_tasks=10, output_file=out_path, params=params)
-    uavs = generate_uavs(num_uavs, uav_params)
-    tasks = generate_tasks(num_tasks, task_params)
+    uavs = generate_uav_dict_list(num_uavs, uav_params)
+    tasks = generate_task_dict_list(num_tasks, task_params)
     data = {
         "resources_num": resources_num,
         "num_uavs": num_uavs,

@@ -41,7 +41,7 @@ class Point:
         return Point(self.xyz - other.xyz)
 
     def distance_to(self, other: "Point") -> float:
-        return np.linalg.norm(self.xyz - other.xyz)
+        return np.linalg.norm(self.xyz - other.xyz).item()
 
     def direction_to(self, other: "Point") -> np.ndarray:
         delta = other.xyz - self.xyz
@@ -71,13 +71,14 @@ class Entity:
         if not isinstance(self.position, Point):
             raise TypeError("position must be a Point")
 
-    def type(self):
-        return self.__class__.__name__
+    @classmethod
+    def type_name(cls):
+        return cls.__name__
 
     def to_dict(self) -> Dict:
         return {
             "id": self.id,
-            "type": self.type(),
+            "type": self.type_name(),
             "position": self.position.tolist(),
         }
 
@@ -86,14 +87,14 @@ class Entity:
         return cls(data["id"], data["position"])
 
     def brief_info(self) -> str:
-        return f"{self.type()} {self.id} at {self.position}"
+        return f"{self.type_name()} {self.id} at {self.position}"
 
 
 def plot_entities_on_axes(ax: plt.Axes, entities: List[Entity], **kwargs) -> None:
     text_delta = 0.2  # 文本偏移量
     for entity in entities:
         x, y, z = entity.position.xyz
-        ax.scatter(x, y, label=f"{entity.type()} {entity.id}", **kwargs)
+        ax.scatter(x, y, label=f"{entity.type_name()} {entity.id}", **kwargs)
         ax.text(x, y + text_delta, s=entity.brief_info(), ha="center")
 
 

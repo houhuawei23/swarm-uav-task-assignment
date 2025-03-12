@@ -3,9 +3,12 @@ from typing import List, Dict, Tuple
 from dataclasses import dataclass, field
 import numpy as np
 
-
-from framework import *
-
+from framework.base import HyperParams
+from framework.uav import UAV, UAVManager
+from framework.task import Task, TaskManager
+from framework.coalition_manager import CoalitionManager
+from framework.mrta_solver import MRTASolver
+from framework.utils import calculate_obtained_resources
 
 def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Dict[int, List[int]]]:
     """
@@ -53,7 +56,6 @@ def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Di
 
 
 from . import csci2024
-from framework.utils import calculate_obtained_resources
 
 
 def calcualte_assignment_score(

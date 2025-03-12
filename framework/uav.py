@@ -32,7 +32,7 @@ class UAV(Entity):
     def __init__(
         self,
         id: int,
-        position: Point,
+        position: Point | List[float] | np.ndarray,
         resources: List[float],
         value: float,
         max_speed: float,

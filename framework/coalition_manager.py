@@ -11,10 +11,10 @@ from .task import Task, TaskManager
 from .utils import evaluate_assignment
 
 
-@dataclass
+
 class CoalitionManager:
-    task2coalition: Dict[int, List[int]] = field(default_factory=dict, init=False)
-    uav2task: Dict[int, int] = field(default_factory=dict, init=False)
+    # task2coalition: Dict[int, List[int]] = field(default_factory=dict, init=False)
+    # uav2task: Dict[int, int] = field(default_factory=dict, init=False)
 
     def __init__(self, uav_ids: List[int], task_ids: List[int]):
         # task -> coalition is empty (only None -> all UAV ids)

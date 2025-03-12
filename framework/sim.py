@@ -39,7 +39,7 @@ class SimulationEnv:
         self.time_step = 0
         self.sim_history: List[SimState] = []
 
-    def run(self, steps: int = 10):
+    def run(self, steps: int = 10, debug_level=0):
         print("--- Simulation Started ---")
         uav_dict_list = self.uav_manager.to_dict_list()
         sim_state = SimState(self.time_step, uav_dict_list)
@@ -48,12 +48,12 @@ class SimulationEnv:
             self.simulate_step()
         print("--- Simulation Finished ---")
         # print(self.sim_history)
-        for sim_state in self.sim_history:
-            print(sim_state.time_step, sim_state.uav_dict_list)
+        # for sim_state in self.sim_history:
+        #     print(sim_state.time_step, sim_state.uav_dict_list)
         self.visualize_simulation()
         # self.analyze_results()
 
-    def simulate_step(self):
+    def simulate_step(self, debug=False):
         self.time_step += 1
         unassigned_uav_ids = self.coalition_manager.get_unassigned_uav_ids()
         for uav in self.uav_manager.get_all():
@@ -62,9 +62,9 @@ class SimulationEnv:
             # else
             taskid = self.coalition_manager.get_taskid(uav.id)
             task = self.task_manager.get(taskid)
-            print(uav.debug_info())
+            # print(uav.debug_info())
             uav.move_to(task.position, 0.1)
-            print(uav.debug_info())
+            # print(uav.debug_info())
 
         # record state
         uav_dict_list = self.uav_manager.to_dict_list()

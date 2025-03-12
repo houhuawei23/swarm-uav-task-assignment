@@ -20,17 +20,54 @@ def get_resources_weights(required_resources, task_obtained_resources):
 
 
 @dataclass(repr=True)
-class EvaluationResult:
+class EvalResult:
     completion_rate: float = 0.0
     resource_use_rate: float = 0.0
+    total_distance: float = 0.0
+    total_energy: float = 0.0
+    total_exploss: float = 0.0
+    elapsed_time: float = 0.0
+    solver_name: str = field(default="")
+    task2coalition: Dict[int | None, List[int]] = field(default=None)
+
+    def format_print(self):
+        print(f"EvalResult for {self.solver_name}")
+        print(f" Completion Rate: {self.completion_rate:.2f}")
+        print(f" Resource Use Rate: {self.resource_use_rate:.2f}")
+        print(f" Total Distance: {self.total_distance:.2f}")
+        print(f" Total Energy: {self.total_energy:.2f}")
+        print(f" Total Exploss: {self.total_exploss:.2f}")
+        print(f" Elapsed Time: {self.elapsed_time:.2f}")
+        # print(f"Solver Name: {self.solver_name}")
+        print(f" Task2Coalition: {self.task2coalition}")
+        print()
 
 
 def calculate_map_shape(uav_manager: UAVManager, task_manager: TaskManager):
     entities_list = uav_manager.get_all() + task_manager.get_all()
     max_x = max(entity.position.x for entity in entities_list)
     max_y = max(entity.position.y for entity in entities_list)
+    max_z = max(entity.position.z for entity in entities_list)
 
-    return (max_x + 1, max_y + 1, 0)
+    return (max_x + 1, max_y + 1, max_z + 1)
+
+
+def calculate_map_shape_beta(uav_list: List[UAV], task_list: List[UAV]):
+    entities_list = uav_list + task_list
+    max_x = max(entity.position.x for entity in entities_list)
+    max_y = max(entity.position.y for entity in entities_list)
+    max_z = max(entity.position.z for entity in entities_list)
+
+    return (max_x + 1, max_y + 1, max_z + 1)
+
+
+def calculate_map_shape_gamma(uav_dict_list: List[UAV], task_sict_list: List[UAV]):
+    dict_list = uav_dict_list + task_sict_list
+    max_x = max(item["position"][0] for item in dict_list)
+    max_y = max(item["position"][1] for item in dict_list)
+    max_z = max(item["position"][2] for item in dict_list)
+
+    return (max_x + 1, max_y + 1, max_z + 1)
 
 
 def calculate_obtained_resources(
@@ -89,20 +126,71 @@ def calculate_resource_use_rate(
     return (1 - np.sum(unused_resources) / np.sum(all_input_resources)).item()
 
 
+def calculate_total_distance(
+    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int | None, List[int]]
+):
+    total_distance = 0.0
+    for task_id, coalition in task2coalition.items():
+        if task_id is not None:
+            task = task_manager.get(task_id)
+            uavs = [uav_manager.get(uav_id) for uav_id in coalition]
+            for uav in uavs:
+                total_distance += uav.position.distance_to(task.position)
+    return total_distance
+
+
+def calculate_total_energy(
+    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int | None, List[int]]
+):
+    total_energy = 0.0
+    for task_id, coalition in task2coalition.items():
+        if task_id is not None:
+            task = task_manager.get(task_id)
+            uavs = [uav_manager.get(uav_id) for uav_id in coalition]
+            # breakpoint()
+            for uav in uavs:
+                total_energy += (
+                    uav.fly_energy_per_time * uav.position.distance_to(task.position)
+                    + uav.hover_energy_per_time * task.execution_time
+                )
+    return total_energy
+
+
+def calculate_total_exploss(
+    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int | None, List[int]]
+):
+    """
+    计算期望损失: sum(task.threat * uav.value)
+    """
+    total_exploss = 0.0
+    for task_id, coalition in task2coalition.items():
+        if task_id is not None:
+            task = task_manager.get(task_id)
+            uavs = [uav_manager.get(uav_id) for uav_id in coalition]
+            for uav in uavs:
+                total_exploss += task.threat * uav.value
+    return total_exploss
+
+
 def evaluate_assignment(
     uav_manager: UAVManager,
     task_manager: TaskManager,
     task2coalition: Dict[int, List[int]],
     resources_num: int,
-) -> EvaluationResult:
+) -> EvalResult:
     completion_rate = calualte_task_completion_rate(
         uav_manager, task_manager, task2coalition, resources_num
     )
     resource_use_rate = calculate_resource_use_rate(
         uav_manager, task_manager, task2coalition, resources_num
     )
+    total_distance = calculate_total_distance(uav_manager, task_manager, task2coalition)
+    total_energy = calculate_total_energy(uav_manager, task_manager, task2coalition)
+    total_exploss = calculate_total_exploss(uav_manager, task_manager, task2coalition)
 
-    return EvaluationResult(completion_rate, resource_use_rate)
+    return EvalResult(
+        completion_rate, resource_use_rate, total_distance, total_energy, total_exploss
+    )
 
 
 def format_json(json_file_path, config_path=".prettierrc"):

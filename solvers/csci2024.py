@@ -5,7 +5,12 @@ import random
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from framework import *
+from framework.base import HyperParams
+from framework.uav import UAV, UAVManager
+from framework.task import Task, TaskManager
+from framework.coalition_manager import CoalitionManager
+from framework.mrta_solver import MRTASolver
+
 from framework.utils import calculate_obtained_resources, get_resources_weights
 
 np.set_printoptions(precision=2)
@@ -322,7 +327,7 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
         # print(f"row_ind: {row_ind}, col_ind: {col_ind}")
         have_assigned = False
         for uav_idx, task_idx in zip(row_ind, col_ind):
-            print(unassigned_uav_ids, task_ids)
+            # print(unassigned_uav_ids, task_ids)
             # print(f"uav_idx: {uav_idx}, task_idx: {task_idx}")
             # print("here", unassigned_uav_ids[uav_idx])
             uav: UAV = self.uav_manager.get(unassigned_uav_ids[uav_idx])
@@ -417,9 +422,9 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
             task_ids = self.task_manager.get_ids()
 
             benefit_matrix = self.cal_benefit_matrix(unassigned_uav_ids, task_ids, debug=debug)
-            print(unassigned_uav_ids)
-            print(task_ids)
-            print(benefit_matrix)
+            # print(unassigned_uav_ids)
+            # print(task_ids)
+            # print(benefit_matrix)
             # 3. matching based on maximum weighed principle (based on benefit matrix)
             if not self.match_tasks(benefit_matrix, unassigned_uav_ids, task_ids, debug=debug):
                 # TODO: 问题，根据收益矩阵为每个任务选择使得总最大的无人机；

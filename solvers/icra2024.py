@@ -1,10 +1,19 @@
-from typing import List, Tuple, Dict
-from dataclasses import dataclass, field
+from typing import List, Tuple, Dict, Type
 import random
 import numpy as np
+from dataclasses import dataclass, field
+from copy import deepcopy
 
-from framework.base import Point
-from framework import *
+from framework.base import HyperParams
+from framework.uav import UAV, UAVManager
+from framework.task import Task, TaskManager
+from framework.coalition_manager import CoalitionManager
+from framework.mrta_solver import MRTASolver
+
+from .iros2024 import cal_uav_utility_in_colition
+
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import connected_components
 
 
 @dataclass
@@ -14,10 +23,6 @@ class Message:
     uav_update_step_dict: Dict[int, int]
     task2coalition: Dict[int, List[int]]
     uav2task: Dict[int, int]
-
-
-from .iros2024 import cal_uav_utility_in_colition
-from copy import deepcopy
 
 
 # @dataclass
@@ -43,7 +48,7 @@ class AutoUAV(UAV):
     def __init__(
         self,
         id: int,
-        position: Point,
+        position: List[float] | np.ndarray,
         resources: List[float] | np.ndarray,
         value: float,
         max_speed: float,
@@ -172,10 +177,6 @@ class AutoUAV(UAV):
         return info
 
 
-from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import connected_components
-
-
 def get_connected_components(distance_matrix: np.ndarray, comm_distance: float) -> List[List[int]]:
     neighbor_mask = distance_matrix < comm_distance
     neighbor_distance_matrix = distance_matrix * neighbor_mask
@@ -228,6 +229,9 @@ def get_connected_components_uavid(uav_list: List[UAV], comm_distance: float) ->
 
 class ICRA2024_CoalitionFormationGame(MRTASolver):
     """
+    TODO: 该让不同component的无人机组之间能相互通信，通过leader uav...
+    否则每一组无人机都是孤立进行任务分配，整体效能太差
+
     1. based on cur coalition, try to divert to another task coaliton.
         1.1. if changed, update_step += 1, changed = True.
         1.2. if not changed, update_step, changed = False.
@@ -283,6 +287,10 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
     ```
     """
 
+    @staticmethod
+    def uav_type() -> Type:
+        return AutoUAV
+
     def init_allocate(self, components: List[List[int]], debug=False):
         """
         ```
@@ -328,13 +336,10 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
                 break
 
             total_changed = False
-            default_sample_size = 3
             for component in components:
                 # Warning: if not random sample, may be deadlock!!! vibrate!!!
                 rec_sample_size = max(1, len(component) // 2)
-                sampled_uavids = random.sample(
-                    component, k=min(default_sample_size, rec_sample_size)
-                )
+                sampled_uavids = random.sample(component, rec_sample_size)
                 messages: List[Message] = []
                 component_changed = False
                 # for uav_id in component:

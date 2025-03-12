@@ -3,8 +3,11 @@ from dataclasses import dataclass, field
 import random
 import numpy as np
 
-
-from framework import *
+from framework.base import HyperParams
+from framework.uav import UAV, UAVManager
+from framework.task import Task, TaskManager
+from framework.coalition_manager import CoalitionManager
+from framework.mrta_solver import MRTASolver
 from framework.utils import calculate_obtained_resources
 
 
@@ -113,6 +116,12 @@ def cal_uav_utility_in_colition(
     return utility
 
 
+# def cal_sample_size(size, min_sample_size=3):
+#     rec_sample_size = max(1, size // 2)
+#     sample_size = max(min_sample_size, rec_sample_size)
+#     return sample_size
+
+
 class IROS2024_CoalitionFormationGame(MRTASolver):
     """
     ```cpp
@@ -205,9 +214,9 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
             self.coalition_manager.assign(uav.id, task_id)
 
         iter_cnt = 0
-        default_sample_size = 3
+        # default_sample_size = 3
         rec_sample_size = max(1, self.uav_manager.size() // 2)
-        sample_size = min(default_sample_size, rec_sample_size)
+        # sample_size = max(default_sample_size, rec_sample_size)
         while True:
             print(f"iter {iter_cnt}")
             if iter_cnt > self.hyper_params.max_iter:
@@ -216,7 +225,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
             # each iter randomly sample some uavs,
             # check whether they are stable (based on game theory stability)
             # Warning: if not random sample, may be deadlock!!! vibrate!!!
-            sampled_uavs = random.sample(self.uav_manager.get_all(), sample_size)
+            sampled_uavs = random.sample(self.uav_manager.get_all(), rec_sample_size)
             changed = self.allocate_once(sampled_uavs, debug=debug)
             # changed = self.allocate_once(self.uav_manager.get_all(), debug=debug)
             if not changed:

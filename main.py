@@ -8,9 +8,9 @@ from framework.task import Task, TaskManager
 from framework.coalition_manager import CoalitionManager
 from framework.utils import calculate_map_shape
 from framework.sim import SimulationEnv
+from framework.test import TestFramework
 
-
-from solvers.driver import CmdArgs, run_solver
+from solvers.driver import CmdArgs, run_solver, get_SolverTypes
 from solvers.icra2024 import AutoUAV
 
 
@@ -41,6 +41,7 @@ def main():
         default="./.images/.result.png",
         help="path to the output file",
     )
+    parser.add_argument("--show", action="store_true", help="whether to show the result")
 
     # parse args
     args = parser.parse_args()
@@ -49,6 +50,16 @@ def main():
         f"Using test case: {cmd_args.test_case_path}, output path: {cmd_args.output_path}, choice: {cmd_args.choice}"
     )
 
+    solver_types = get_SolverTypes([cmd_args.choice])
+    test_framework = TestFramework(solver_types)
+    test_framework.run_test(cmd_args.test_case_path)
+    test_framework.analyze()
+    # if args.show:
+    #     for result in test_framework.results:
+            
+
+
+def test_old():
     with open(cmd_args.test_case_path, "r") as f:
         data = json.load(f)
 
@@ -80,8 +91,8 @@ def main():
     # multi_processes_run(uav_manager, task_manager, hyper_params, timeout=timeout)
     # simple_run(uav_manager, task_manager, hyper_params)
     coalition_manager = run_solver(uav_manager, task_manager, hyper_params, cmd_args)
-    sim_env = SimulationEnv(uav_manager, task_manager, coalition_manager, hyper_params)
-    sim_env.run()
+    # sim_env = SimulationEnv(uav_manager, task_manager, coalition_manager, hyper_params)
+    # sim_env.run()
     # sim_env.visualize_simulation()
 
 

@@ -29,8 +29,7 @@ class Task(Entity):
     time_window: List  # 时间窗口 [min_start, max_start]
     threat: float  # 威胁指数
 
-    execution_time: int  # 任务执行时间
-    resources_nums: int  # 资源数量
+    execution_time: float  # 任务执行时间
 
     def __init__(
         self,
@@ -43,7 +42,6 @@ class Task(Entity):
     ):
         super().__init__(id, position)
         self.required_resources = np.array(required_resources)
-        self.resources_nums = len(self.required_resources)
         self.time_window = time_window
         self.threat = threat
         assert execution_time is not None
@@ -51,8 +49,6 @@ class Task(Entity):
 
     def __post_init__(self):
         super().__post_init__()
-        # self.required_resources = np.array(self.required_resources)
-        # self.resources_nums = len(self.required_resources)
 
     def __eq__(self, other: "Task"):
         return (
@@ -82,9 +78,6 @@ class Task(Entity):
             position=data["position"],
             time_window=data["time_window"],
             threat=data["threat"],
-            # execution_time=data["execution_time"],
-            # if data.get("execution_time") is not None
-            # else random.uniform(1, 3),
             execution_time=data.get("execution_time", random.uniform(1, 3)),
         )
 

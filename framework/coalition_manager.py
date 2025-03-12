@@ -1,5 +1,7 @@
 from typing import List, Tuple, Dict
 from dataclasses import dataclass, field
+import warnings
+import logging
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,7 +11,6 @@ from .base import plot_entities_on_axes, HyperParams
 from .uav import UAV, UAVManager
 from .task import Task, TaskManager
 from .utils import evaluate_assignment
-
 
 
 class CoalitionManager:
@@ -36,13 +37,12 @@ class CoalitionManager:
         if task is None, unassign the uav.
         """
         if task_id is None:
-            print(f"Assigning u{uav_id} to None")
+            # print(f"Assigning u{uav_id} to None")
             self.unassign(uav_id)
             return
 
         # print(f"Assigning u{uav_id} to t{task_id}")
         if self.uav2task[uav_id] is not None:
-            print(f"Error: UAV {uav_id} has already been assigned to task {self.uav2task[uav_id]}")
             raise Exception(
                 f"UAV {uav_id} has already been assigned to task {self.uav2task[uav_id]}"
             )
@@ -53,9 +53,11 @@ class CoalitionManager:
     def unassign(self, uav_id: int):
         """Unassigns a UAV from its current task, updating the coalitions dictionary."""
         task_id = self.uav2task[uav_id]
-        print(f"Unassigning u{uav_id} from t{task_id}")
+        # print(f"Unassigning u{uav_id} from t{task_id}")
         if task_id is None:
-            print(f"Warning: UAV {uav_id} is not assigned to any task")
+            # print(f"Warning: UAV {uav_id} is not assigned to any task")
+            # warnings.warn(f"Warning: UAV {uav_id} is not assigned to any task", UserWarning)
+            pass
         else:
             self.task2coalition[task_id].remove(uav_id)
             self.task2coalition[None].append(uav_id)

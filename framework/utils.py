@@ -27,11 +27,11 @@ class EvalResult:
     total_energy: float = 0.0
     total_exploss: float = 0.0
     elapsed_time: float = 0.0
-    solver_name: str = field(default="")
-    task2coalition: Dict[int | None, List[int]] = field(default=None)
+    # solver_name: str = field(default="")
+    # task2coalition: Dict[int | None, List[int]] = field(default=None)
 
     def format_print(self):
-        print(f"EvalResult for {self.solver_name}")
+        # print(f"EvalResult for {self.solver_name}")
         print(f" Completion Rate: {self.completion_rate:.2f}")
         print(f" Resource Use Rate: {self.resource_use_rate:.2f}")
         print(f" Total Distance: {self.total_distance:.2f}")
@@ -39,8 +39,15 @@ class EvalResult:
         print(f" Total Exploss: {self.total_exploss:.2f}")
         print(f" Elapsed Time: {self.elapsed_time:.2f}")
         # print(f"Solver Name: {self.solver_name}")
-        print(f" Task2Coalition: {self.task2coalition}")
+        # print(f" Task2Coalition: {self.task2coalition}")
         print()
+
+    def to_dict(self):
+        return self.__dict__
+
+    @classmethod
+    def from_dict(cls, data: Dict):
+        return cls(**data)
 
 
 def calculate_map_shape(uav_manager: UAVManager, task_manager: TaskManager):

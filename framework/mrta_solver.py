@@ -1,7 +1,7 @@
 from typing import Type
 from dataclasses import dataclass, field
 
-from .base import HyperParams
+from .base import HyperParams, LogLevel
 from .uav import UAV, UAVManager
 from .task import TaskManager
 from .coalition_manager import CoalitionManager
@@ -22,7 +22,7 @@ class MRTASolver:
     def uav_type() -> Type[UAV]:
         return UAV
 
-    def run_allocate(self, debug=False):
+    def run_allocate(self):
         iter_cnt = 0
 
         while True:

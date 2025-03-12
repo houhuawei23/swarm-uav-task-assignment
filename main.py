@@ -8,7 +8,7 @@ from framework.task import Task, TaskManager
 from framework.coalition_manager import CoalitionManager
 from framework.utils import calculate_map_shape
 from framework.sim import SimulationEnv
-from framework.test import TestFramework
+# from framework.test import TestFramework
 
 from solvers.driver import CmdArgs, run_solver, get_SolverTypes
 from solvers.icra2024 import AutoUAV
@@ -51,15 +51,34 @@ def main():
     )
 
     solver_types = get_SolverTypes([cmd_args.choice])
-    test_framework = TestFramework(solver_types)
-    test_framework.run_test(cmd_args.test_case_path)
-    test_framework.analyze()
+    # test_framework = TestFramework(solver_types)
+    uav_nums = [10, 20, 40, 80, 160]
+    uav_nums = [10, 20, 30]
+    # results = test_framework.run_vary_uav_nums(uav_nums)
+    # test_framework.visualize_results(results)
+    from framework.test import run_vary_uav_nums, run_test, save_results
+    from framework.test import visualize_results_beta
+
+    results = run_vary_uav_nums(uav_nums, solver_types)
+    labels = [
+        "elapsed_time",
+        "completion_rate",
+        "resource_use_rate",
+        "total_distance",
+        "total_energy",
+        "total_exploss",
+    ]
+    visualize_results_beta(results, labels)
+    save_results(results, "results.json")
+    # results = run_test(solver_types, cmd_args.test_case_path)
+    # for result in results:
+    #     result.format_print()
+    # test_framework.analyze()
     # if args.show:
     #     for result in test_framework.results:
-            
 
 
-def test_old():
+def test_old(cmd_args: CmdArgs):
     with open(cmd_args.test_case_path, "r") as f:
         data = json.load(f)
 

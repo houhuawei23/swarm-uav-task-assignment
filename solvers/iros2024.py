@@ -3,12 +3,14 @@ from dataclasses import dataclass, field
 import random
 import numpy as np
 
-from framework.base import HyperParams
+from framework.base import HyperParams, LogLevel
 from framework.uav import UAV, UAVManager
 from framework.task import Task, TaskManager
 from framework.coalition_manager import CoalitionManager
 from framework.mrta_solver import MRTASolver
 from framework.utils import calculate_obtained_resources
+
+log_level: LogLevel = LogLevel.SILENCE
 
 
 def min_max_norm(value, min_value, max_value):
@@ -153,7 +155,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
     ```
     """
 
-    def allocate_once(self, uav_list: List[UAV], debug=False):
+    def allocate_once(self, uav_list: List[UAV]):
         changed = False
         # random sample allocate
         task_ids = self.task_manager.get_ids().copy()
@@ -204,8 +206,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
 
         return changed
 
-    def run_allocate(self, debug=False):
-        print("first allocate")
+    def run_allocate(self):
         # first allocate
         # each uav randomly choose a task, may be repeated
         task_ids = self.task_manager.get_ids()
@@ -218,19 +219,23 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
         rec_sample_size = max(1, self.uav_manager.size() // 2)
         # sample_size = max(default_sample_size, rec_sample_size)
         while True:
-            print(f"iter {iter_cnt}")
+            if log_level >= LogLevel.INFO:
+                print(f"iter {iter_cnt}")
             if iter_cnt > self.hyper_params.max_iter:
-                print(f"reach max iter {self.hyper_params.max_iter}")
+                if log_level >= LogLevel.INFO:
+                    print(f"reach max iter {self.hyper_params.max_iter}")
                 break
             # each iter randomly sample some uavs,
             # check whether they are stable (based on game theory stability)
             # Warning: if not random sample, may be deadlock!!! vibrate!!!
             sampled_uavs = random.sample(self.uav_manager.get_all(), rec_sample_size)
-            changed = self.allocate_once(sampled_uavs, debug=debug)
+            changed = self.allocate_once(sampled_uavs)
             # changed = self.allocate_once(self.uav_manager.get_all(), debug=debug)
             if not changed:
                 iter_cnt += 1
-                print("unchanged")
+                if log_level >= LogLevel.INFO:
+                    print("unchanged")
             else:
                 iter_cnt = 0
-                print("changed")
+                if log_level >= LogLevel.INFO:
+                    print("changed")

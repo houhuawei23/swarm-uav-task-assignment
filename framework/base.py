@@ -1,9 +1,16 @@
 from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass, field
+from enum import IntEnum
 
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+
+
+class LogLevel(IntEnum):
+    SILENCE = 0
+    INFO = 1
+    DEBUG = 2
 
 
 @dataclass(repr=True, eq=True)
@@ -158,13 +165,21 @@ class EntityManager:
 
 @dataclass(repr=True)
 class HyperParams:
-    resources_num: int  # 资源维度数
-    map_shape: Tuple[int, int, int]  # 任务环境区域大小
-    alpha: float  # 资源贡献权重
-    beta: float  # 路径成本权重
-    gamma: float  # 威胁权重
-    mu: float  # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
-    max_iter: int  # 最大迭代次数
+    resources_num: int = 0  # 资源维度数
+    # 任务环境区域大小
+    map_shape: Tuple[int, int, int] = field(default_factory=lambda: (10, 10, 10))
+    alpha: float = 0.0  # 资源贡献权重
+    beta: float = 0.0  # 路径成本权重
+    gamma: float = 0.0  # 威胁权重
+    mu: float = 0.0  # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
+    max_iter: int = 0.0  # 最大迭代次数
+
+    def to_dict(self) -> Dict:
+        return self.__dict__
+
+    @classmethod
+    def from_dict(cls, data: Dict):
+        return cls(**data)
 
 
 @dataclass

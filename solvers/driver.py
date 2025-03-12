@@ -60,7 +60,7 @@ def run_solver(
     )
 
     start_time = time.time()
-    solver.run_allocate(debug=False)
+    solver.run_allocate(debug_level=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
 

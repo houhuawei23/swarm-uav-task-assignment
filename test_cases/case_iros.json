@@ -1,6 +1,6 @@
 {
   "resources_num": 5,
-  "num_uavs": 50,
+  "uav_num": 50,
   "num_tasks": 5,
   "uavs": [
     {

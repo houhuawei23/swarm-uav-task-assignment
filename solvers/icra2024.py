@@ -4,7 +4,7 @@ import numpy as np
 from dataclasses import dataclass, field
 from copy import deepcopy
 
-from framework.base import HyperParams
+from framework.base import HyperParams, LogLevel
 from framework.uav import UAV, UAVManager
 from framework.task import Task, TaskManager
 from framework.coalition_manager import CoalitionManager
@@ -311,7 +311,7 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
                 uav: AutoUAV = self.uav_manager.get(uav_id)
                 uav.init(component_uav_manager, self.task_manager, self.hyper_params)
 
-    def run_allocate(self, debug=False):
+    def run_allocate(self, log_level: LogLevel = LogLevel.SILENCE):
         """
         每个uav是独立的个体，自己运行一套算法。
         中控模拟程序只需要触发每个uav的动作，模拟uav之间的通信等。
@@ -323,7 +323,7 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
         print(f"components: {components}")
 
         self.init_allocate(components)
-        if debug:
+        if log_level >= LogLevel.INFO:
             for uav in uav_list:
                 print(uav.debug_info())
 
@@ -349,13 +349,13 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
                     uav.try_divert()
                     msg = uav.send_msg()
                     messages.append(msg)
-                    if debug:
+                    if log_level >= LogLevel.DEBUG:
                         print(uav.debug_info())
 
                 for uav_id in component:
                     uav: AutoUAV = self.uav_manager.get(uav_id)
                     uav.receive_and_update(messages)
-                    if debug:
+                    if log_level >= LogLevel.DEBUG:
                         print(uav.debug_info())
 
                 component_changed = any(msg.changed for msg in messages)
@@ -363,7 +363,8 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
 
             # print(f"total_changed: {total_changed}")
             if not total_changed:
-                print("all uav not changed, break!")
+                if log_level >= LogLevel.INFO:
+                    print("all uav not changed, break!")
                 break
 
             iter_cnt += 1

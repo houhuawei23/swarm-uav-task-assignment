@@ -158,9 +158,9 @@ class UAVGenParams(GenParams):
     trans_power_range: Tuple[float, float] = field(default=None)
 
 
-def generate_uav_dict_list(num_uavs: int, params: UAVGenParams = UAVGenParams()) -> List[Dict]:
+def generate_uav_dict_list(uav_num: int, params: UAVGenParams = UAVGenParams()) -> List[Dict]:
     uavs = []
-    for id in range(1, num_uavs + 1):
+    for id in range(1, uav_num + 1):
         uav = {
             "id": id,
             "resources": [
@@ -183,9 +183,9 @@ def generate_uav_dict_list(num_uavs: int, params: UAVGenParams = UAVGenParams())
 
 
 def generate_uav_list(
-    num_uavs: int, params: UAVGenParams = UAVGenParams(), UAVType: Type[UAV] = UAV
+    uav_num: int, params: UAVGenParams = UAVGenParams(), UAVType: Type[UAV] = UAV
 ) -> List[UAV]:
-    return [UAVType.from_dict(uav) for uav in generate_uav_dict_list(num_uavs, params)]
+    return [UAVType.from_dict(uav) for uav in generate_uav_dict_list(uav_num, params)]
 
 
 if __name__ == "__main__":

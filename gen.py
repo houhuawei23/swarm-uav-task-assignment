@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 
 def gen_iros2024_case(out_path):
-    num_uavs = 50
+    uav_num = 50
     num_tasks = 5
 
     region_ranges = [(100, 900), (100, 900), (0, 0)]  # [0, 1000]x[0, 1000] m
@@ -58,11 +58,11 @@ def gen_iros2024_case(out_path):
     attenuation_factor = 3  # 衰减因子
     noise_power_range = [-60, -70]  # dBm
 
-    uavs = generate_uav_dict_list(num_uavs, uav_params)
+    uavs = generate_uav_dict_list(uav_num, uav_params)
     tasks = generate_task_dict_list(num_tasks, task_params)
     data = {
         "resources_num": resources_num,
-        "num_uavs": num_uavs,
+        "uav_num": uav_num,
         "num_tasks": num_tasks,
         "uavs": uavs,
         "tasks": tasks,
@@ -74,7 +74,7 @@ def gen_iros2024_case(out_path):
 
 
 def gen_csci2024_data(out_path):
-    num_uavs = 50
+    uav_num = 50
     num_tasks = 5
 
     region_ranges = [(0, 100), (0, 100), (0, 0)]
@@ -104,12 +104,12 @@ def gen_csci2024_data(out_path):
         time_window_ranges=time_window_ranges,
         threat_range=threat_range,
     )
-    # generate_data(num_uavs=50, num_tasks=10, output_file=out_path, params=params)
-    uavs = generate_uav_dict_list(num_uavs, uav_params)
+    # generate_data(uav_num=50, num_tasks=10, output_file=out_path, params=params)
+    uavs = generate_uav_dict_list(uav_num, uav_params)
     tasks = generate_task_dict_list(num_tasks, task_params)
     data = {
         "resources_num": resources_num,
-        "num_uavs": num_uavs,
+        "uav_num": uav_num,
         "num_tasks": num_tasks,
         "uavs": uavs,
         "tasks": tasks,
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         help="path to the test case file",
     )
     parser.add_argument(
-        "--num_uavs",
+        "--uav_num",
         type=int,
         default=50,
         help="number of uavs",

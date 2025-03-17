@@ -216,7 +216,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
 
         iter_cnt = 0
         # default_sample_size = 3
-        rec_sample_size = max(1, self.uav_manager.size() // 2)
+        rec_sample_size = max(1, self.uav_manager.size() // 3)
         # sample_size = max(default_sample_size, rec_sample_size)
         while True:
             if log_level >= LogLevel.INFO:

@@ -53,13 +53,14 @@ def main():
     solver_types = get_SolverTypes([cmd_args.choice])
     # test_framework = TestFramework(solver_types)
     uav_nums = [10, 20, 40, 80, 160]
-    uav_nums = [10, 20, 30]
     # results = test_framework.run_vary_uav_nums(uav_nums)
     # test_framework.visualize_results(results)
-    from framework.test import run_vary_uav_nums, run_test, save_results
+    from framework.test import run_vary_uav_nums, run_test, save_results, read_results
     from framework.test import visualize_results_beta
 
     results = run_vary_uav_nums(uav_nums, solver_types)
+    # results = read_results("./.results/results_uav_num_vary.json")
+    # results = read_results("./.results/results_uavnum_vary_320.json")
     labels = [
         "elapsed_time",
         "completion_rate",
@@ -69,7 +70,7 @@ def main():
         "total_exploss",
     ]
     visualize_results_beta(results, labels)
-    save_results(results, "results.json")
+    # save_results(results, "./.results/results_uavnum_vary_320.json")
     # results = run_test(solver_types, cmd_args.test_case_path)
     # for result in results:
     #     result.format_print()

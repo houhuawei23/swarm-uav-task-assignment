@@ -16,6 +16,9 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
 
 
+log_level: LogLevel = LogLevel.SILENCE
+
+
 @dataclass
 class Message:
     uav_id: int
@@ -311,7 +314,7 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
                 uav: AutoUAV = self.uav_manager.get(uav_id)
                 uav.init(component_uav_manager, self.task_manager, self.hyper_params)
 
-    def run_allocate(self, log_level: LogLevel = LogLevel.SILENCE):
+    def run_allocate(self):
         """
         每个uav是独立的个体，自己运行一套算法。
         中控模拟程序只需要触发每个uav的动作，模拟uav之间的通信等。
@@ -320,10 +323,10 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
         comm_distance = self.hyper_params.map_shape[0] / 3
         uav_list = self.uav_manager.get_all()
         components = get_connected_components_uavid(uav_list, comm_distance)
-        print(f"components: {components}")
+        # print(f"components: {components}")
 
         self.init_allocate(components)
-        if log_level >= LogLevel.INFO:
+        if log_level >= LogLevel.DEBUG:
             for uav in uav_list:
                 print(uav.debug_info())
 
@@ -336,9 +339,9 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
                 break
 
             total_changed = False
-            for component in components:
+            for component in components: # TODO: leader follower
                 # Warning: if not random sample, may be deadlock!!! vibrate!!!
-                rec_sample_size = max(1, len(component) // 2)
+                rec_sample_size = max(1, len(component) // 3)
                 sampled_uavids = random.sample(component, rec_sample_size)
                 messages: List[Message] = []
                 component_changed = False
@@ -346,7 +349,7 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
                 for uav_id in sampled_uavids:
                     uav: AutoUAV = self.uav_manager.get(uav_id)
                     uav.changed = False
-                    uav.try_divert()
+                    uav.try_divert() # random 
                     msg = uav.send_msg()
                     messages.append(msg)
                     if log_level >= LogLevel.DEBUG:

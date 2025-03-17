@@ -63,7 +63,7 @@ def run_test(solver_types: List[Type[MRTASolver]], test_case_path: str):
             beta=10.0,
             gamma=0.05,
             mu=-1.0,
-            max_iter=25,
+            max_iter=10,
         )
 
         coalition_mana, eval_reuslt = test_solver(
@@ -85,7 +85,7 @@ class SaveResult:
     task_num: int
     hyper_params: HyperParams
     eval_result: EvalResult
-    task2coalition: Dict[int | None, List[int]]
+    # task2coalition: Dict[int | None, List[int]]
 
     def to_dict(self):
         return {
@@ -95,7 +95,7 @@ class SaveResult:
             "task_num": self.task_num,
             "hyper_params": self.hyper_params.to_dict(),
             "eval_result": self.eval_result.to_dict(),
-            "task2coalition": self.task2coalition,
+            # "task2coalition": self.task2coalition,
         }
 
     @classmethod
@@ -107,7 +107,7 @@ class SaveResult:
             task_num=data["task_num"],
             hyper_params=HyperParams.from_dict(data["hyper_params"]),
             eval_result=EvalResult.from_dict(data["eval_result"]),
-            task2coalition=data["task2coalition"],
+            # task2coalition=data["task2coalition"],
         )
 
 
@@ -142,7 +142,7 @@ def run_vary_uav_nums(uav_nums: List[int], solver_types: List[Type[MRTASolver]])
                 beta=10.0,
                 gamma=0.05,
                 mu=-1.0,
-                max_iter=25,
+                max_iter=10,
             )
 
             coalition_mana, eval_reuslt = test_solver(
@@ -153,7 +153,7 @@ def run_vary_uav_nums(uav_nums: List[int], solver_types: List[Type[MRTASolver]])
                 test_case_name="random",
                 uav_num=uav_num,
                 task_num=task_num,
-                task2coalition=coalition_mana.get_task2coalition().copy(),
+                # task2coalition=coalition_mana.get_task2coalition().copy(),
                 hyper_params=hyper_params,
                 eval_result=eval_reuslt,
             )
@@ -234,6 +234,20 @@ def save_results(
     with open(file_path, "w") as f:
         json.dump(save_result_dict_list, f, indent=4)
     format_json(file_path)
+
+
+def read_results(file_path: str) -> Dict[str, Dict[int, SaveResult]]:
+    with open(file_path, "r") as f:
+        save_result_dict_list = json.load(f)
+    results = {}
+    for save_result_dict in save_result_dict_list:
+        solver_name = save_result_dict["solver_name"]
+        uav_num = save_result_dict["uav_num"]
+        result = SaveResult.from_dict(save_result_dict)
+        if solver_name not in results:
+            results[solver_name] = {}
+        results[solver_name][uav_num] = result
+    return results
 
 
 class TestFramework:

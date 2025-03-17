@@ -336,7 +336,7 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
                 print(f"uav_idx: {uav_idx}, task_idx: {task_idx}")
 
             if benefit_matrix[uav_idx, task_idx] > 0:
-                if log_level >= LogLevel.DEBUG:
+                if log_level >= LogLevel.INFO:
                     print(f"Assigning u{uav.id} to t{task.id}")
                 # 6. update the required resources of task
                 # task_obtained_resources += uav.resources
@@ -409,13 +409,14 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
         iter_cnt = 0
         while True:
             # in once iter, try to assign one uav to each task
-            if log_level >= LogLevel.DEBUG:
+            if log_level >= LogLevel.INFO:
                 print(f"Iteration {iter_cnt} begin.")
                 print(f"Cur coalition set: {self.coalition_manager}")
             if iter_cnt >= self.hyper_params.max_iter:
+                # assert False
                 if log_level >= LogLevel.DEBUG:
                     print("Max iterations reached, may have dead loop")
-                    break
+                break
             iter_cnt += 1
             # 2. calculate the benefit matrix
             unassigned_uav_ids = self.coalition_manager.get_unassigned_uav_ids().copy()
@@ -433,11 +434,11 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
                 print("No more UAVs can be assigned to tasks. Over, break.")
                 break
 
-            if self.check_stability():
-                if log_level >= LogLevel.DEBUG:
+            if self.check_stability(): # !!! check_stability 与 match_tasks 冲突，导致震荡
+                if log_level >= LogLevel.INFO:
                     print(f"check_stability True, Iteration {iter_cnt} Assign Valid.")
             else:
-                if log_level >= LogLevel.DEBUG:
+                if log_level >= LogLevel.INFO:
                     print(f"check_stability False, Iteration {iter_cnt} Assign Invalid.")
 
         return self.coalition_manager

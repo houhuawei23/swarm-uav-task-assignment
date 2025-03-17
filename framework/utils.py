@@ -221,3 +221,43 @@ def save_uavs_and_tasks(uav_manager: UAVManager, task_manager: TaskManager, outp
     with open(output_file_path, "w") as f:
         json.dump(data, f)
     format_json(output_file_path)
+
+
+import pandas as pd
+
+
+def flatten_dict(base_dict: Dict, parent_key="", sep="_"):
+    items = []
+    for k, v in base_dict.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def unflatten_dict(flat_dict, key_prefixes, sep="_"):
+    nested_dict = {}
+
+    for key, value in flat_dict.items():
+        # 识别 key 属于哪个前缀
+        matched_prefix = None
+        for prefix in key_prefixes:
+            if key.startswith(prefix + sep) or key == prefix:
+                matched_prefix = prefix
+                break
+
+        if matched_prefix:
+            sub_key = (
+                key[len(matched_prefix) + 1 :] if key != matched_prefix else None
+            )  # 去除前缀部分
+            if sub_key:
+                current = nested_dict.setdefault(matched_prefix, {})
+                current[sub_key] = value
+            else:
+                nested_dict[matched_prefix] = value  # 直接存储无子 key 的项
+        else:
+            nested_dict[key] = value  # 非嵌套 key 直接存入
+
+    return nested_dict

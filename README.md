@@ -11,6 +11,17 @@
 - [x] Implement algorithm in [iros2024@LiwangZhang](https://doi.org/10.1109/IROS58592.2024.10801429), `./solvers/iros.py`
 - [x] Implement algorithm in [icra2024@LiwangZhang](https://doi.org/10.1109/ICRA57147.2024.10611476), `./solvers/icra.py`
 - Warning: iros2024@LiwangZhang and icra2024@LiwangZhang both need random sample in trigger uav stage! Otherwise, the alg may be vibrate and stuck in a deadlock.
+- [ ] Implement Read/Write for solvers test results, using `pandas`.
+- [ ] Test solver on one profile multiple times and draw the **box** fig.
+- [ ] Implement Real Muti-Process simulation in [`./solvers/icra.py`](./solvers/icra2024.py).
+- [ ] Mutiple MRAT Solver Algorithm Implment:
+  - [ ] Acution Based Methods: Consensus-Based Bundle Algorithm (CBBA) and Contract Net Protocol (CNP)
+  - [ ] Optimization Based Methods:
+    - [ ] Deterministic Optimization: linear programming (LP), mixed-integer linear programming (MILP), and the Hungarian algorithm
+    - [ ] Meta-heuristics: genetic algorithms (GA), simulated annealing (SA), and swarm intelligence
+  - [ ] RL Based Methods
+  - [ ] Hybrid Methods
+- [ ] 算法复杂度分析。。。
 
 ## Show Cases
 

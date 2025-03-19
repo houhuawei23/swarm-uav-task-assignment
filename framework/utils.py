@@ -45,6 +45,9 @@ class EvalResult:
     def to_dict(self):
         return self.__dict__
 
+    def to_flattened_dict(self):
+        return self.__dict__
+
     @classmethod
     def from_dict(cls, data: Dict):
         return cls(**data)
@@ -80,8 +83,13 @@ def calculate_map_shape_gamma(uav_dict_list: List[UAV], task_sict_list: List[UAV
 def calculate_obtained_resources(
     coalition: List[int], uav_manager: UAVManager, resources_num: int
 ) -> List[float]:
+    """
+    max O(n)
+    """
     obtained_resources = np.zeros(resources_num)
     for uav_id in coalition:
+        if uav_id not in uav_manager.get_ids():
+            continue
         uav = uav_manager.get(uav_id)
         obtained_resources += uav.resources
 

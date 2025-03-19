@@ -11,11 +11,12 @@ from framework.task import Task, TaskManager
 from framework.coalition_manager import CoalitionManager
 from framework.mrta_solver import MRTASolver
 
-from framework.utils import calculate_obtained_resources, get_resources_weights
+# from framework.utils import calculate_obtained_resources, get_resources_weights
+import framework.utils as utils
 
 np.set_printoptions(precision=2)
 
-log_level: LogLevel = LogLevel.SILENCE
+log_level: LogLevel = LogLevel.INFO
 
 
 def calculate_path_cost(
@@ -71,7 +72,6 @@ def calculate_resource_contribution(
     task: Task,
     task_collation: List[int],
     task_obtained_resources: List[float],
-    # debug=False,
 ) -> float:
     """Calculates the resource contribution of a UAV to a task.
 
@@ -81,6 +81,9 @@ def calculate_resource_contribution(
     uav.resources = [2, 3, 4]
     uav.resources - np.maximum(now_required_resources, 0) = [0, 1, 4]
     surplus_resources_sum_of_uav = 0 + 1 + 4 = 5
+
+    uav 加入 task 的 task_coalition 的资源贡献，是其边际贡献。
+    即，如果当前 task_coaliton 已经完全满足 task 的资源需求，那么 uav 加入该 coalition 的贡献为 0。
     """
     # 资源贡献计算
     # I = uav.resources + satisfied, paper meaning this???
@@ -96,12 +99,9 @@ def calculate_resource_contribution(
     surplus_resources_sum_of_uav = sum(
         np.maximum(uav.resources - np.maximum(now_required_resources, 0), 0)
     )
-    if log_level >= LogLevel.DEBUG:
-        print(f"abtained_resources: {task_obtained_resources_copy}")
 
-    Kj = get_resources_weights(
-        task.required_resources, task_obtained_resources_copy
-    )  # 表征 task 对资源的偏好
+    # 表征 task 对资源的偏好
+    Kj = utils.get_resources_weights(task.required_resources, task_obtained_resources_copy)
     I = uav.resources  # only consider uav's own resources
     O = surplus_resources_sum_of_uav
     P = 0.5
@@ -123,15 +123,16 @@ def calculate_resource_contribution(
     return max(0, contribution)
 
 
-def calculate_uav_task_benefit(
+def calculate_uav_benefit_4_join_task_coalition(
     uav: UAV,
     task: Task,
-    task_collation: List[int],
+    task_collation: List[int],  # may have or not have uav
     task_obtained_resources: List[float],
     hyper_params: HyperParams,
-    # debug=False,
 ) -> float:
     """Calculates the total benefit of assigning a UAV to a task.
+
+    O(1)
 
     r(ui, tj) = alpha * val(ui, tj) + beta * cost(ui, tj) - gamma * risk(ui, tj)
 
@@ -139,13 +140,6 @@ def calculate_uav_task_benefit(
     The weights (alpha, beta, gamma) are used to balance the importance of each factor.
 
     # epsilon(uav, task) =
-
-    Args:
-        uav: The UAV object representing the unmanned aerial vehicle.
-        task: The task object representing the task to be assigned.
-
-    Returns:
-        float: The total benefit of assigning the UAV to the task.
     """
     if log_level >= LogLevel.DEBUG:
         print(f"cal_uav_task_benefit(uav=u{uav.id}, task=t{task.id})")
@@ -178,7 +172,7 @@ def calculate_uav_task_benefit(
     return total_benefit
 
 
-def calculate_task_on_given_coalition_benefit(
+def calculate_task_benefit_4_given_coalition(
     task: Task,
     given_coalition: List[int],
     uav_manager: UAVManager,
@@ -193,13 +187,17 @@ def calculate_task_on_given_coalition_benefit(
     if log_level >= LogLevel.DEBUG:
         print(f"cal_task_coalition_utility(task=t{task.id}, coalition={given_coalition})")
     utility = 0.0
+    obtained_resources = utils.calculate_obtained_resources(
+        given_coalition, uav_manager, hyper_params.resources_num
+    )
     for uav_id in given_coalition:  # ??? coalition=[u1, u2] on t2, 效用不应该简单叠加吧！！
+        if uav_id not in uav_manager.get_ids():
+            # jump the uav not in uav_manager
+            print(f"uav_id={uav_id} not in uav_manager")
+            continue
         uav = uav_manager.get(uav_id)
-        obtained_resources = calculate_obtained_resources(
-            given_coalition, uav_manager, hyper_params.resources_num
-        )
 
-        benefit = calculate_uav_task_benefit(
+        benefit = calculate_uav_benefit_4_join_task_coalition(
             uav, task, given_coalition, obtained_resources, hyper_params
         )
         utility += benefit
@@ -207,6 +205,30 @@ def calculate_task_on_given_coalition_benefit(
     if log_level >= LogLevel.DEBUG:
         print(f"  utility={utility:.2f}")
         print("cal_task_coalition_utility finished")
+    return utility
+
+
+def cal_uav_utility_in_colition(
+    uav: UAV, task: Task, coalition: List[int], uav_manager: UAVManager, hyper_params: HyperParams
+) -> float:
+    """
+    calcualte utility of uav in coalition of task, dont change anything.
+    if uav in coalition of task, utility = u_have - u_not_have
+    if uav not in coalition of task, utility = u_have - u_not_have (will add uav to coalition to calculate)
+    """
+
+    coalition_copy = coalition.copy()
+    if uav.id in coalition:  # uav already in coalition
+        coalition_copy.remove(uav.id)
+
+    u_not_have = calculate_task_benefit_4_given_coalition(
+        task, coalition_copy, uav_manager, hyper_params
+    )
+    coalition_copy.append(uav.id)
+    u_have = calculate_task_benefit_4_given_coalition(
+        task, coalition_copy, uav_manager, hyper_params
+    )
+    utility = u_have - u_not_have
     return utility
 
 
@@ -238,8 +260,9 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
     """
 
     def cal_benefit_matrix(self, unassigned_uav_ids: List[int], task_ids: List[int]) -> np.ndarray:
-        """Calculates the benefit matrix for UAVs and tasks.
-        计算每个无人机对每个任务的收益矩阵
+        """Calculates the benefit matrix for UAVs and tasks. 计算每个无人机对每个任务的收益矩阵
+
+        O(n*m)
 
         The benefit matrix is a 2D array where each element represents the benefit of assigning a specific UAV to a specific task.
         The benefit is calculated based on resource contribution, path cost, and threat cost.
@@ -252,44 +275,22 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
         m = len(task_ids)
         benefit_matrix = np.zeros((n, m))
 
-        for i, uav_id in enumerate(unassigned_uav_ids):
-            for j, task_id in enumerate(task_ids):
+        for i, uav_id in enumerate(unassigned_uav_ids):  # n
+            for j, task_id in enumerate(task_ids):  # m
                 uav = self.uav_manager.get(uav_id)
                 task = self.task_manager.get(task_id)
                 coalition = self.coalition_manager.get_coalition(task_id)
-                obtained_resources = calculate_obtained_resources(
+                obtained_resources = utils.calculate_obtained_resources(
                     coalition, self.uav_manager, self.hyper_params.resources_num
-                )
+                )  # O(n)
 
-                benefit_matrix[i, j] = calculate_uav_task_benefit(
+                benefit_matrix[i, j] = calculate_uav_benefit_4_join_task_coalition(
                     uav, task, coalition, obtained_resources, self.hyper_params
-                )
-        # debug = True
+                )  # O(1)
         if log_level >= LogLevel.DEBUG:
             print("Benefit Matrix:")
             print(benefit_matrix)
         return benefit_matrix
-
-    def cal_uav_utility_in_colition(self, uav: UAV, task: Task, coalition: List[int]) -> float:
-        """
-        calcualte utility of uav in coalition of task, dont change anything.
-        if uav in coalition of task, utility = u_have - u_not_have
-        if uav not in coalition of task, utility = u_have - u_not_have (will add uav to coalition to calculate)
-        """
-
-        coalition_copy = coalition.copy()
-        if uav.id in coalition:  # uav already in coalition
-            coalition_copy.remove(uav.id)
-
-        u_not_have = calculate_task_on_given_coalition_benefit(
-            task, coalition_copy, self.uav_manager, self.hyper_params
-        )
-        coalition_copy.append(uav.id)
-        u_have = calculate_task_on_given_coalition_benefit(
-            task, coalition_copy, self.uav_manager, self.hyper_params
-        )
-        utility = u_have - u_not_have
-        return utility
 
     def cal_sum_utility(self) -> float:
         """Calculates the total utility of the current coalition assignments.
@@ -297,7 +298,7 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
         """
         total_utility = 0.0
         for task in self.task_manager:
-            total_utility += calculate_task_on_given_coalition_benefit(
+            total_utility += calculate_task_benefit_4_given_coalition(
                 task,
                 self.coalition_manager.get_coalition(task.id),
                 self.uav_manager,
@@ -309,6 +310,8 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
 
     def match_tasks(self, benefit_matrix, unassigned_uav_ids, task_ids):
         """Matches UAVs to tasks based on the benefit matrix.
+
+        O(n^3) + O(m)
 
         This function uses the Hungarian algorithm (linear sum assignment) to find the optimal assignment
         of UAVs to tasks that maximizes the total benefit. UAVs are assigned to tasks only if the benefit
@@ -323,10 +326,10 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
         每个任务匹配到一个无人机
         """
         # 最大加权匹配
-        row_ind, col_ind = linear_sum_assignment(benefit_matrix, maximize=True)
+        row_ind, col_ind = linear_sum_assignment(benefit_matrix, maximize=True)  # O(n^3) ?
         # print(f"row_ind: {row_ind}, col_ind: {col_ind}")
         have_assigned = False
-        for uav_idx, task_idx in zip(row_ind, col_ind):
+        for uav_idx, task_idx in zip(row_ind, col_ind):  # O(m)
             # print(unassigned_uav_ids, task_ids)
             # print(f"uav_idx: {uav_idx}, task_idx: {task_idx}")
             # print("here", unassigned_uav_ids[uav_idx])
@@ -347,6 +350,8 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
     def check_stability(self):
         """Checks the stability of the current coalition assignments.
 
+        max O(m x n x m x m) = max O(n*m^3)
+
         A coalition is considered stable if no UAV can improve its benefit by switching to another task.
         This function iterates through all UAVs and tasks to check if any UAV can achieve a higher benefit
         by being reassigned to a different task. If such a case is found, the UAV is reassigned, and the
@@ -357,25 +362,24 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
         """
         stable = True
         # 遍历所有任务的所有已分配的无人机
-        for taski in self.task_manager:
-            # print(
-            #     f"Checking stability for task {task.id}, coalition: {self.coalition_manager[task.id]}"
-            # )
-            for uav_id in self.coalition_manager.get_coalition(taski.id):
+        for taski in self.task_manager:  # O(m)
+            taski_coalition = self.coalition_manager.get_coalition(taski.id)
+            for uav_id in taski_coalition:  # max O(n)
                 uav = self.uav_manager.get(uav_id)
-                taski_coalition = self.coalition_manager.get_coalition(taski.id)
-                cur_utility = self.cal_uav_utility_in_colition(uav, taski, taski_coalition.copy())
+                cur_utility = cal_uav_utility_in_colition(
+                    uav, taski, taski_coalition.copy(), self.uav_manager, self.hyper_params
+                )
 
                 if log_level >= LogLevel.DEBUG:
                     print(f"Cur utility: u{uav.id}-t{taski.id}={cur_utility}")
 
-                for taskj in self.task_manager:
+                for taskj in self.task_manager:  # O(m)
                     if taskj.id != taski.id:
                         taskj_coalition = self.coalition_manager.get_coalition(taskj.id)
 
-                        move_to_taskj_utility = self.cal_uav_utility_in_colition(
-                            uav, taskj, taskj_coalition.copy()
-                        )
+                        move_to_taskj_utility = cal_uav_utility_in_colition(
+                            uav, taskj, taskj_coalition.copy(), self.uav_manager, self.hyper_params
+                        )  # max O(m)
 
                         if log_level >= LogLevel.DEBUG:
                             print(f"utility: u{uav.id}-t{taskj.id}={move_to_taskj_utility}")
@@ -383,6 +387,8 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
                             self.coalition_manager.unassign(uav.id)  # 无人机退出原联盟
                             stable = False
                             break
+        if log_level >= LogLevel.INFO:
+            print(f"check_stability {stable}")
 
         return stable
 
@@ -405,40 +411,35 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
             1. if true, jump to 2.
             2. else go to 8.
         8. Exit.When all tasks exit, obtain the final coalition structure.
+
+        max_iter x [O(n m) + O(n^3 + m) + O(n m^3)]
         """
         iter_cnt = 0
-        while True:
+        while True:  # max_iter cnt
             # in once iter, try to assign one uav to each task
             if log_level >= LogLevel.INFO:
                 print(f"Iteration {iter_cnt} begin.")
                 print(f"Cur coalition set: {self.coalition_manager}")
             if iter_cnt >= self.hyper_params.max_iter:
-                # assert False
                 if log_level >= LogLevel.DEBUG:
                     print("Max iterations reached, may have dead loop")
-                break
+                break  # break while
+
             iter_cnt += 1
             # 2. calculate the benefit matrix
             unassigned_uav_ids = self.coalition_manager.get_unassigned_uav_ids().copy()
             task_ids = self.task_manager.get_ids()
 
-            benefit_matrix = self.cal_benefit_matrix(unassigned_uav_ids, task_ids)
-            # print(unassigned_uav_ids)
-            # print(task_ids)
-            # print(benefit_matrix)
+            benefit_matrix = self.cal_benefit_matrix(unassigned_uav_ids, task_ids)  # O(n*m)
+
             # 3. matching based on maximum weighed principle (based on benefit matrix)
-            if not self.match_tasks(benefit_matrix, unassigned_uav_ids, task_ids):
+            if not self.match_tasks(benefit_matrix, unassigned_uav_ids, task_ids):  # O(n^3 + m)
                 # TODO: 问题，根据收益矩阵为每个任务选择使得总最大的无人机；
                 # 问题是如果所有无人机对某任务的收益都小于 0, 按理来说不应该给该任务分配任何的无人机
                 # 此处算法实现是否会导致给该任务分配一个收益 < 0 的无人机？
                 print("No more UAVs can be assigned to tasks. Over, break.")
                 break
 
-            if self.check_stability(): # !!! check_stability 与 match_tasks 冲突，导致震荡
-                if log_level >= LogLevel.INFO:
-                    print(f"check_stability True, Iteration {iter_cnt} Assign Valid.")
-            else:
-                if log_level >= LogLevel.INFO:
-                    print(f"check_stability False, Iteration {iter_cnt} Assign Invalid.")
+            self.check_stability()  # O(n * m^3)
 
         return self.coalition_manager

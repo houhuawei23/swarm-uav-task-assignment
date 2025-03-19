@@ -51,16 +51,18 @@ def run_solver(
     hyper_params: HyperParams,
     cmd_args: CmdArgs,
     result_queue: Queue = None,
-):
+) -> CoalitionManager:
     print("---")
-    coalition_manager = CoalitionManager(uav_manager.get_ids(), task_manager.get_ids())
+    coalition_manager: CoalitionManager = CoalitionManager(
+        uav_manager.get_ids(), task_manager.get_ids()
+    )
 
     solver = get_SolverType(cmd_args.choice)(
         uav_manager, task_manager, coalition_manager, hyper_params
     )
 
     start_time = time.time()
-    solver.run_allocate(debug_level=False)
+    solver.run_allocate()
     end_time = time.time()
     elapsed_time = end_time - start_time
 

@@ -165,17 +165,44 @@ class EntityManager:
 
 @dataclass(repr=True)
 class HyperParams:
+    """Hyper parameters for the solver.
+
+    Attributes:
+        resources_num: int = 0 资源维度数.
+        map_shape: Tuple[int, int, int] = (10, 10, 10) 任务环境区域大小.
+        alpha: float = 0.0 资源贡献权重.
+        beta: float = 0.0 路径成本权重.
+        gamma: float = 0.0 威胁权重.
+        mu: float = -1.0 ui 加入 tj 无资源贡献时的惩罚 (path_cost).
+        max_iter: int = 0 最大迭代次数.
+    """
+
     resources_num: int = 0  # 资源维度数
     # 任务环境区域大小
     map_shape: Tuple[int, int, int] = field(default_factory=lambda: (10, 10, 10))
-    alpha: float = 0.0  # 资源贡献权重
-    beta: float = 0.0  # 路径成本权重
-    gamma: float = 0.0  # 威胁权重
-    mu: float = 0.0  # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
-    max_iter: int = 0.0  # 最大迭代次数
+    alpha: float = 1.0  # 资源贡献权重
+    beta: float = 10.0  # 路径成本权重
+    gamma: float = 1.0  # 威胁权重
+    mu: float = -1.0  # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
+    max_iter: int = 10  # 最大迭代次数
 
     def to_dict(self) -> Dict:
         return self.__dict__
+
+    def to_flattened_dict(self) -> Dict:
+        # return {f"hyper_params.{k}": v for k, v in self.__dict__.items()}
+        flattened_dict = {
+            "resources_num": self.resources_num,
+            "map_shape_x": self.map_shape[0],
+            "map_shape_y": self.map_shape[1],
+            "map_shape_z": self.map_shape[2],
+            "alpha": self.alpha,
+            "beta": self.beta,
+            "gamma": self.gamma,
+            "mu": self.mu,
+            "max_iter": self.max_iter,
+        }
+        return flattened_dict
 
     @classmethod
     def from_dict(cls, data: Dict):

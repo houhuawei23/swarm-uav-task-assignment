@@ -74,9 +74,9 @@ def cal_uav_utility_for_task(
 def cal_uav_utility_in_colition(
     uav: UAV,
     task: Task,
+    coalition: List[int],
     uav_manager: UAVManager,
     task_manager: TaskManager,
-    coalition: List[int],
     hyper_params: HyperParams,
     debug=False,
 ) -> float:
@@ -122,6 +122,7 @@ def cal_uav_utility_in_colition(
 #     rec_sample_size = max(1, size // 2)
 #     sample_size = max(min_sample_size, rec_sample_size)
 #     return sample_size
+from . import csci2024
 
 
 class IROS2024_CoalitionFormationGame(MRTASolver):
@@ -174,12 +175,19 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
                     taski = self.task_manager.get(taski_id)
                     taski_coalition_copy = self.coalition_manager.get_coalition(taski_id).copy()
                     # cal utility in taski coalition
-                    ui = cal_uav_utility_in_colition(
+                    # ui = cal_uav_utility_in_colition(
+                    #     uav,
+                    #     taski,
+                    #     taski_coalition_copy,
+                    #     self.uav_manager,
+                    #     self.task_manager,
+                    #     self.hyper_params,
+                    # )
+                    ui = csci2024.cal_uav_utility_in_colition(
                         uav,
                         taski,
-                        self.uav_manager,
-                        self.task_manager,
                         taski_coalition_copy,
+                        self.uav_manager,
                         self.hyper_params,
                     )
 
@@ -189,12 +197,19 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
                 else:
                     taskj = self.task_manager.get(taskj_id)
                     taskj_coalition_copy = self.coalition_manager.get_coalition(taskj_id).copy()
-                    uj = cal_uav_utility_in_colition(
+                    # uj = cal_uav_utility_in_colition(
+                    #     uav,
+                    #     taskj,
+                    #     taskj_coalition_copy,
+                    #     self.uav_manager,
+                    #     self.task_manager,
+                    #     self.hyper_params,
+                    # )
+                    uj = csci2024.cal_uav_utility_in_colition(
                         uav,
                         taskj,
-                        self.uav_manager,
-                        self.task_manager,
                         taskj_coalition_copy,
+                        self.uav_manager,
                         self.hyper_params,
                     )
 
@@ -207,6 +222,10 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
         return changed
 
     def run_allocate(self):
+        """
+        min O(n x m x n)
+        有随机性 确切的时间复杂度如何估计？
+        """
         # first allocate
         # each uav randomly choose a task, may be repeated
         task_ids = self.task_manager.get_ids()
@@ -214,14 +233,21 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
             task_id = random.choice(task_ids)
             self.coalition_manager.assign(uav.id, task_id)
 
-        iter_cnt = 0
+        not_changed_iter_cnt = 0
         # default_sample_size = 3
-        rec_sample_size = max(1, self.uav_manager.size() // 3)
-        # sample_size = max(default_sample_size, rec_sample_size)
-        while True:
+        sample_rate = 1 / 3
+        rec_sample_size = int(max(1, self.uav_manager.size() * sample_rate))
+        rec_max_iter = int(1 / sample_rate) + 1  # 期望来看，每个uav都会被抽样到
+        print(
+            f"uav size: {self.uav_manager.size()}, rec sample size {rec_sample_size}, rec max iter {rec_max_iter}"
+        )
+        while True: # max_iter or 1/sample_rate
             if log_level >= LogLevel.INFO:
-                print(f"iter {iter_cnt}")
-            if iter_cnt > self.hyper_params.max_iter:
+                print(f"iter {not_changed_iter_cnt}")
+            if (
+                not_changed_iter_cnt > self.hyper_params.max_iter
+                or not_changed_iter_cnt > rec_max_iter
+            ):
                 if log_level >= LogLevel.INFO:
                     print(f"reach max iter {self.hyper_params.max_iter}")
                 break
@@ -229,13 +255,13 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
             # check whether they are stable (based on game theory stability)
             # Warning: if not random sample, may be deadlock!!! vibrate!!!
             sampled_uavs = random.sample(self.uav_manager.get_all(), rec_sample_size)
-            changed = self.allocate_once(sampled_uavs)
+            changed = self.allocate_once(sampled_uavs) # sample_size x m x n
             # changed = self.allocate_once(self.uav_manager.get_all(), debug=debug)
             if not changed:
-                iter_cnt += 1
+                not_changed_iter_cnt += 1
                 if log_level >= LogLevel.INFO:
                     print("unchanged")
             else:
-                iter_cnt = 0
+                not_changed_iter_cnt = 0
                 if log_level >= LogLevel.INFO:
                     print("changed")

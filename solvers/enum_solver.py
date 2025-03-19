@@ -74,7 +74,7 @@ def calcualte_assignment_score(
             obtained_resources = calculate_obtained_resources(
                 coalition, uav_manager, hyper_params.resources_num
             )
-            benefit = csci2024.calculate_uav_task_benefit(
+            benefit = csci2024.calculate_uav_benefit_4_join_task_coalition(
                 uav, task, coalition, obtained_resources, hyper_params
             )
             task_score += benefit

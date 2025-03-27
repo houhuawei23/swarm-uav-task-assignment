@@ -45,67 +45,15 @@
 <img src="./assets/case3_coalition_game_result.png" width=75%/> 
 </p>
 
-```python
-def run_solver(
-    uav_manager: UAVManager,
-    task_manager: TaskManager,
-    hyper_params: HyperParams,
-    cmd_args: CmdArgs,
-    result_queue: Queue = None,
-):
-    coalition_manager = CoalitionManager(uav_manager.get_ids(), task_manager.get_ids())
-    if cmd_args.choice == "csci":
-        solver = ChinaScience2024_CoalitionFormationGame(
-            uav_manager, task_manager, coalition_manager, hyper_params
-        )
-    elif cmd_args.choice == "iros":
-        solver = IROS2024_CoalitionFormationGame(
-            uav_manager, task_manager, coalition_manager, hyper_params
-        )
-    elif cmd_args.choice == "icra":
-        solver = ICRA2024_CoalitionFormationGame(
-            uav_manager, task_manager, coalition_manager, hyper_params
-        )
-    elif cmd_args.choice == "enum":
-        solver = EnumerationAlgorithm(uav_manager, task_manager, coalition_manager, hyper_params)
-    else:
-        raise ValueError("Invalid choice")
-
-    start_time = time.time()
-    solver.run_allocate(debug=False)
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-
-    if result_queue is not None:
-        result_queue.put(elapsed_time)
-
-    print(f"{cmd_args.choice} Result: {coalition_manager}")
-
-    eval_reuslt = evaluate_assignment(
-        uav_manager, task_manager, coalition_manager.task2coalition, hyper_params.resources_num
-    )
-    print(f"Eval Result: {eval_reuslt}")
-    coalition_manager.plot_map(
-        uav_manager, task_manager, hyper_params, cmd_args.output_path, plot_unassigned=True
-    )
-
-```
-
 ```bash
-$ python ./sim.py --test_case ./tests/case0.json --choice icra
+# vary uav nums
+$ python ./main.py --test_case uav_num --choices all --random_test_times 25 --uav_nums 10 20 50 80 100
 
-Using test case: ./tests/case0.json, output path: ./.images/.result.png, choice: icra
-Using UAV Type: <class 'solvers.icra2024.AutoUAV'>
-HyperParams(resources_num=2, map_shape=(np.int64(21), np.int64(21), 0), alpha=1.0, beta=10.0, gamma=0.05, mu=-1.0, max_iter=25)
-UAVManager with 3 uavs.
-  AutoUAV(id=1, position=Point(xyz=array([0, 0, 0])), resources=array([5, 3]), value=10, max_speed=20, mass=1.0, fly_energy_per_time=1.1958796458778673, hover_energy_per_time=2.038716644186131, uav_manager=None, task_manager=None, coalition_manager=None, hyper_params=None, uav_update_step_dict={}, changed=False)
-  ...
-TaskManager with 2 tasks.
-  Task(id=1, position=Point(xyz=array([5, 5, 0])), required_resources=array([4, 2]), time_window=[0, 100], threat=0.5, execution_time=2.821083273573082, resources_nums=2)
-  ...
-...
-icra Result: {1: [1], 2: [3], None: [2]}
-Eval Result: EvaluationResult(completion_rate=0.5, resource_use_rate=0.7333333333333334)
+# vary task nums
+$ python ./main.py --test_case task_num --choices iros csci --random_test_times 25 --task_nums 10 20 50 80 100
+
+# vary hyper params
+$ python ./main.py --test_case hyper_params.beta --choices csci --random_test_times 10 --hp_values 1.0 2.0 4.0 8.0 16.0 50.0
 ```
 
 ## Project Structure

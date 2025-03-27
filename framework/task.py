@@ -123,6 +123,14 @@ class TaskGenParams(GenParams):
     threat_range: Tuple[float, float] = field(default=(0.25, 0.75))
     execution_time_range: Tuple[float, float] = field(default=None)
 
+    @staticmethod
+    def from_gen_params(gen_params: GenParams):
+        tp = TaskGenParams(
+            region_ranges=gen_params.region_ranges,
+            resources_num=gen_params.resources_num,
+        )
+        return tp
+
 
 precision = 2
 

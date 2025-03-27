@@ -120,6 +120,33 @@ def gen_csci2024_data(out_path):
     format_json(out_path)
 
 
+def gen_sim_test(out_path):
+    """
+    | R1   | -340   | 20     |
+    | R2   | -300   | -80    |
+    | R3   | -360   | -160   |
+    """
+    red_center_locations = [(-340, 20), (-300, -80), (-360, -160)]  # km
+    """
+    | O1   | 0      | 0      |
+    | O2   | -60    | -80    |
+    | O3   | -60    | -180   |
+    | O4   | 100    | -140   |
+    | O5   | 80     | -40    |
+    | D1   | -40    | 0      |
+    | D2   | 80     | 0      |
+    """
+    blue_center_locations = [
+        (0, 0),
+        (-60, -80),
+        (-60, -180),
+        (100, -140),
+        (80, -40),
+        (-40, 0),
+        (80, 0),
+    ]
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Coalition Formation Game Simulation")
     # test_case

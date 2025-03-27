@@ -53,7 +53,7 @@ class EvalResult:
         return cls(**data)
 
 
-def calculate_map_shape(uav_manager: UAVManager, task_manager: TaskManager):
+def calculate_map_shape_on_mana(uav_manager: UAVManager, task_manager: TaskManager):
     entities_list = uav_manager.get_all() + task_manager.get_all()
     max_x = max(entity.position.x for entity in entities_list)
     max_y = max(entity.position.y for entity in entities_list)
@@ -62,7 +62,7 @@ def calculate_map_shape(uav_manager: UAVManager, task_manager: TaskManager):
     return (max_x + 1, max_y + 1, max_z + 1)
 
 
-def calculate_map_shape_beta(uav_list: List[UAV], task_list: List[UAV]):
+def calculate_map_shape_on_list(uav_list: List[UAV], task_list: List[UAV]):
     entities_list = uav_list + task_list
     max_x = max(entity.position.x for entity in entities_list)
     max_y = max(entity.position.y for entity in entities_list)
@@ -71,7 +71,7 @@ def calculate_map_shape_beta(uav_list: List[UAV], task_list: List[UAV]):
     return (max_x + 1, max_y + 1, max_z + 1)
 
 
-def calculate_map_shape_gamma(uav_dict_list: List[UAV], task_sict_list: List[UAV]):
+def calculate_map_shape_on_dict_list(uav_dict_list: List[UAV], task_sict_list: List[UAV]):
     dict_list = uav_dict_list + task_sict_list
     max_x = max(item["position"][0] for item in dict_list)
     max_y = max(item["position"][1] for item in dict_list)

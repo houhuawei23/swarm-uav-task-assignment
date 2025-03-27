@@ -3,6 +3,9 @@ from dataclasses import dataclass, field
 import warnings
 import logging
 
+# from copy import deepcopy
+import copy
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Polygon, Wedge
@@ -20,12 +23,23 @@ class CoalitionManager:
     def __init__(self, uav_ids: List[int], task_ids: List[int]):
         # task -> coalition is empty (only None -> all UAV ids)
         self.task2coalition = {task_id: [] for task_id in task_ids}
-        self.task2coalition[None] = uav_ids
+        self.task2coalition[None] = copy.deepcopy(uav_ids)
         # uav -> task is None
         self.uav2task = {uav_id: None for uav_id in uav_ids}
 
+    def __str__(self):
+        return str(self.task2coalition)
+
+    def deepcopy(self):
+        # copy = CoalitionManager([], [])
+        # copy.task2coalition = copy.deepcopy(self.task2coalition)
+        # copy.uav2task = copy.deepcopy(self.uav2task)
+        # return copy
+        return copy.deepcopy(self)
+
     def update_from_assignment(self, assignment: Dict[int, List[int]], uav_manager: UAVManager):
-        self.task2coalition = assignment
+        self.task2coalition = copy.deepcopy(assignment)
+        # self.task2coalition = assignment
         self.uav2task.clear()
 
         for task_id, uav_ids in assignment.items():
@@ -43,9 +57,11 @@ class CoalitionManager:
 
         # print(f"Assigning u{uav_id} to t{task_id}")
         if self.uav2task[uav_id] is not None:
-            raise Exception(
-                f"UAV {uav_id} has already been assigned to task {self.uav2task[uav_id]}"
-            )
+            self.unassign(uav_id)
+
+            # raise Exception(
+            #     f"UAV {uav_id} has already been assigned to task {self.uav2task[uav_id]}"
+            # )
         self.task2coalition[task_id].append(uav_id)
         self.task2coalition[None].remove(uav_id)
         self.uav2task[uav_id] = task_id
@@ -95,6 +111,9 @@ class CoalitionManager:
     def get_coalition(self, task_id: int) -> List[int]:
         return self.task2coalition[task_id]
 
+    def get_coalition_by_uav_id(self, uav_id: int) -> List[int]:
+        return self.task2coalition[self.uav2task[uav_id]]
+
     def get_taskid(self, uavid) -> int | None:
         """
         None means the UAV is not assigned to any task.
@@ -109,9 +128,6 @@ class CoalitionManager:
 
     def get_uav2task(self) -> Dict[int, int]:
         return self.uav2task
-
-    def __str__(self):
-        return str(self.task2coalition)
 
     def format_print(self):
         print(f"task2coalition: {self.task2coalition}")

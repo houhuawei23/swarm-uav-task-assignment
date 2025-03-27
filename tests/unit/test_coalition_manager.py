@@ -2,9 +2,10 @@ from framework.uav import UAV, UAVManager, generate_uav_dict_list
 from framework.task import Task, TaskManager, generate_task_dict_list
 from framework.coalition_manager import CoalitionManager
 from framework import HyperParams
-from framework.utils import calculate_map_shape
+from framework.utils import calculate_map_shape_on_mana
 # from test_uav_task import get_tasks, get_uavs
 
+from copy import deepcopy
 
 def test_coalition_manager():
     uavs = generate_uav_dict_list(3)
@@ -17,7 +18,7 @@ def test_coalition_manager():
     task_manager.format_print()
     hyper_params = HyperParams(
         resources_num=3,
-        map_shape=calculate_map_shape(uav_manager, task_manager),
+        map_shape=calculate_map_shape_on_mana(uav_manager, task_manager),
         alpha=1.0,
         beta=10.0,
         gamma=0.05,
@@ -44,6 +45,14 @@ def test_coalition_manager():
     # 测试更新分配
     new_assignment = {1: [1], 2: [3], 3: [], None: [2]}
     coalition_manager.update_from_assignment(new_assignment, uav_manager)
+    coalition_manager.format_print()
+    new_assignment[None].append(1)
+    
+    print(new_assignment)
+    coalition_manager.format_print()
+
+
+
     assert coalition_manager.get_coalition(1) == [1]
     assert coalition_manager.get_coalition(2) == [3]
     # print(f"dd: {coalition_manager.get_unassigned_uav_ids()}")
@@ -67,3 +76,27 @@ def test_coalition_manager():
     # 测试获取任务 ID
     assert coalition_manager.get_taskid(2) == 1
     assert coalition_manager.get_taskid(1) is None
+
+    # dcopy = coalition_manager.deepcopy()
+    dcopy = deepcopy(coalition_manager)
+    
+    dcopy.unassign(2)
+    
+    print(
+        coalition_manager,
+        id(coalition_manager),
+        id(coalition_manager.task2coalition),
+        id(coalition_manager.uav2task),
+    )
+    print(
+        dcopy,
+        id(dcopy),
+        id(dcopy.task2coalition),
+        id(dcopy.uav2task),
+    )
+    assert id(coalition_manager) != id(dcopy)
+    assert id(coalition_manager.task2coalition) != id(dcopy.task2coalition)
+
+
+if __name__ == "__main__":
+    test_coalition_manager()

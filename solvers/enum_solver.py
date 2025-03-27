@@ -88,7 +88,7 @@ class EnumerationSolver(MRTASolver):
     This algorithm checks all possible combinations of UAVs and tasks.
     """
 
-    def run_allocate(self, debug=False):
+    def run_allocate(self):
         """
         Solves the task assignment problem using enumeration.
         """

@@ -156,7 +156,22 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
     ```
     """
 
+    def __init__(
+        self,
+        uav_manager: UAVManager,
+        task_manager: TaskManager,
+        coalition_manager: CoalitionManager,
+        hyper_params: HyperParams,
+    ):
+        super().__init__(uav_manager, task_manager, coalition_manager, hyper_params)
+        # uav_id -> int
+        self.update_steps = {uav.id: 1 for uav in uav_manager.get_all()}
+
     def allocate_once(self, uav_list: List[UAV]):
+        """
+        Complexity: O(uav_list.size() x m x n)
+
+        """
         changed = False
         # random sample allocate
         task_ids = self.task_manager.get_ids().copy()
@@ -189,7 +204,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
                         taski_coalition_copy,
                         self.uav_manager,
                         self.hyper_params,
-                    )
+                    )  # O(n)
 
                 if taskj_id is None:  # try to divert to taskj (None task)
                     taskj = None
@@ -217,6 +232,8 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
                     # uav leave taski, join taskj
                     self.coalition_manager.unassign(uav.id)
                     self.coalition_manager.assign(uav.id, taskj.id if taskj is not None else None)
+                    # update self.update_steps
+                    self.update_steps[uav.id] += 1
                     changed = True
 
         return changed
@@ -224,6 +241,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
     def run_allocate(self):
         """
         min O(n x m x n)
+        paper: max_iter x O(n m^2) ?? -> correct: max_iter x O(n^2 m)
         有随机性 确切的时间复杂度如何估计？
         """
         # first allocate
@@ -238,10 +256,12 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
         sample_rate = 1 / 3
         rec_sample_size = int(max(1, self.uav_manager.size() * sample_rate))
         rec_max_iter = int(1 / sample_rate) + 1  # 期望来看，每个uav都会被抽样到
-        print(
-            f"uav size: {self.uav_manager.size()}, rec sample size {rec_sample_size}, rec max iter {rec_max_iter}"
-        )
-        while True: # max_iter or 1/sample_rate
+        # print(
+        #     f"uav size: {self.uav_manager.size()}, rec sample size {rec_sample_size}, rec max iter {rec_max_iter}"
+        # )
+        uav_list = self.uav_manager.get_all()
+        # Complexity: max_iter x O(n x m x n)
+        while True:  # max_iter or 1/sample_rate
             if log_level >= LogLevel.INFO:
                 print(f"iter {not_changed_iter_cnt}")
             if (
@@ -254,9 +274,61 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
             # each iter randomly sample some uavs,
             # check whether they are stable (based on game theory stability)
             # Warning: if not random sample, may be deadlock!!! vibrate!!!
-            sampled_uavs = random.sample(self.uav_manager.get_all(), rec_sample_size)
-            changed = self.allocate_once(sampled_uavs) # sample_size x m x n
+            sampled_uavs = random.sample(uav_list, rec_sample_size)
+            # 以历史更新的次数为权重，从 uav_list 中取样
+            # weights = np.ones(len(sampled_uavs))
+            # weights = np.array([self.update_steps[uav.id] for uav in uav_list])
+            # sampled_uavs = random.choices(uav_list, weights=weights, k=rec_sample_size)
+            changed = self.allocate_once(sampled_uavs)  # sample_size x m x n
             # changed = self.allocate_once(self.uav_manager.get_all(), debug=debug)
+            if not changed:
+                not_changed_iter_cnt += 1
+                if log_level >= LogLevel.INFO:
+                    print("unchanged")
+            else:
+                not_changed_iter_cnt = 0
+                if log_level >= LogLevel.INFO:
+                    print("changed")
+
+
+class IROS2024_CoalitionFormationGame_2(IROS2024_CoalitionFormationGame):
+    def run_allocate(self):
+        """
+        min O(n x m x n)
+        paper: max_iter x O(n m^2) ?? -> correct: max_iter x O(n^2 m)
+        有随机性 确切的时间复杂度如何估计？
+        """
+        # first allocate
+        # each uav randomly choose a task, may be repeated
+        task_ids = self.task_manager.get_ids()
+        for uav in self.uav_manager.get_all():
+            task_id = random.choice(task_ids)
+            self.coalition_manager.assign(uav.id, task_id)
+
+        not_changed_iter_cnt = 0
+        # default_sample_size = 3
+        sample_rate = 1 / 3
+        rec_sample_size = int(max(1, self.uav_manager.size() * sample_rate))
+        rec_max_iter = int(1 / sample_rate) + 1  # 期望来看，每个uav都会被抽样到
+        # print(
+        #     f"uav size: {self.uav_manager.size()}, rec sample size {rec_sample_size}, rec max iter {rec_max_iter}"
+        # )
+        uav_list = self.uav_manager.get_all()
+        # Complexity: max_iter x O(n x m x n)
+        while True:  # max_iter or 1/sample_rate
+            if log_level >= LogLevel.INFO:
+                print(f"iter {not_changed_iter_cnt}")
+            if (
+                not_changed_iter_cnt > self.hyper_params.max_iter
+                or not_changed_iter_cnt > rec_max_iter
+            ):
+                if log_level >= LogLevel.INFO:
+                    print(f"reach max iter {self.hyper_params.max_iter}")
+                break
+            # 以历史更新的次数为权重，从 uav_list 中取样
+            weights = np.array([self.update_steps[uav.id] for uav in uav_list])
+            sampled_uavs = random.choices(uav_list, weights=weights, k=rec_sample_size)
+            changed = self.allocate_once(sampled_uavs)  # sample_size x m x n
             if not changed:
                 not_changed_iter_cnt += 1
                 if log_level >= LogLevel.INFO:

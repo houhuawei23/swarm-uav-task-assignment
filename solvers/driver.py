@@ -10,10 +10,7 @@ from framework.coalition_manager import CoalitionManager
 from framework.mrta_solver import MRTASolver
 from framework.utils import evaluate_assignment
 
-from .csci2024 import ChinaScience2024_CoalitionFormationGame
-from .iros2024 import IROS2024_CoalitionFormationGame
-from .icra2024 import ICRA2024_CoalitionFormationGame
-from .enum_solver import EnumerationSolver
+from . import csci2024, iros2024, icra2024, acution_solver, enum_solver
 
 
 @dataclass
@@ -21,24 +18,34 @@ class CmdArgs:
     test_case_path: str
     output_path: str
     choice: str
-    timeout: float = field(default=10)
+    choices: List[str]
+    timeout: float
+    uav_nums: List[int]
+    task_nums: List[int]
+    random_test_times: int
 
 
 def get_SolverType(choice: str) -> Type[MRTASolver]:
     if choice == "csci":
-        return ChinaScience2024_CoalitionFormationGame
+        return csci2024.ChinaScience2024_CoalitionFormationGame
     elif choice == "iros":
-        return IROS2024_CoalitionFormationGame
+        return iros2024.IROS2024_CoalitionFormationGame
+    elif choice == "iros2":
+        return iros2024.IROS2024_CoalitionFormationGame_2
     elif choice == "icra":
-        return ICRA2024_CoalitionFormationGame
+        return icra2024.ICRA2024_CoalitionFormationGame
+    elif choice == "acution":
+        return acution_solver.AcutionBiddingSolverKimi
+    elif choice == "acution_kimi":
+        return acution_solver.AcutionBiddingSolverKimi
     elif choice == "enum":
-        return EnumerationSolver
+        return enum_solver.EnumerationSolver
     else:
         raise ValueError("Invalid choice")
 
 
 def get_SolverTypes(choice_list: List[str]) -> List[Type[MRTASolver]]:
-    all_choices = ["csci", "iros", "icra"]
+    all_choices = ["csci", "iros", "icra", "acution"]
     if len(choice_list) == 1 and choice_list[0] == "all":
         return [get_SolverType(choice) for choice in all_choices]
     else:

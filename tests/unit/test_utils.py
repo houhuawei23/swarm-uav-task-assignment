@@ -18,7 +18,7 @@ def test_get_connected_components():
     assert components == [[0, 1], [2, 3]]
 
 
-from framework.test import SaveResult, SaveResultBeta
+from framework.test import SaveResult
 from framework.utils import flatten_dict, unflatten_dict
 import pandas as pd
 

@@ -14,7 +14,7 @@ from framework.uav import UAV, UAVManager, generate_uav_list
 from framework.task import Task, TaskManager, generate_task_list
 from framework.coalition_manager import CoalitionManager
 from framework import HyperParams
-from framework.utils import calculate_map_shape
+from framework.utils import calculate_map_shape_on_mana
 
 
 def test_autouav():
@@ -37,7 +37,7 @@ def test_autouav():
 
     hyper_params = HyperParams(
         resources_num=3,
-        map_shape=calculate_map_shape(uav_manager, task_manager),
+        map_shape=calculate_map_shape_on_mana(uav_manager, task_manager),
         alpha=1.0,
         beta=10.0,
         gamma=0.05,

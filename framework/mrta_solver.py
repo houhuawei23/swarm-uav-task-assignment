@@ -7,12 +7,24 @@ from .task import TaskManager
 from .coalition_manager import CoalitionManager
 
 
-@dataclass
+# @dataclass
 class MRTASolver:
     uav_manager: UAVManager
     task_manager: TaskManager
     coalition_manager: CoalitionManager
     hyper_params: HyperParams
+
+    def __init__(
+        self,
+        uav_manager: UAVManager,
+        task_manager: TaskManager,
+        coalition_manager: CoalitionManager,
+        hyper_params: HyperParams,
+    ):
+        self.uav_manager = uav_manager
+        self.task_manager = task_manager
+        self.coalition_manager = coalition_manager
+        self.hyper_params = hyper_params
 
     @classmethod
     def type_name(cls):

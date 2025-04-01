@@ -179,7 +179,7 @@ class HyperParams:
 
     resources_num: int = 0  # 资源维度数
     # 任务环境区域大小
-    map_shape: Tuple[int, int, int] = field(default_factory=lambda: (10, 10, 10))
+    map_shape: List[int] = field(default_factory=lambda: [10, 10, 10])
     alpha: float = 1.0  # 资源贡献权重
     beta: float = 10.0  # 路径成本权重
     gamma: float = 1.0  # 威胁权重

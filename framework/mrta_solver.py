@@ -7,7 +7,6 @@ from .task import TaskManager
 from .coalition_manager import CoalitionManager
 
 
-# @dataclass
 class MRTASolver:
     uav_manager: UAVManager
     task_manager: TaskManager

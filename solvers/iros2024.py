@@ -320,7 +320,7 @@ class IROS2024_CoalitionFormationGame_2(IROS2024_CoalitionFormationGame):
                 print(f"iter {not_changed_iter_cnt}")
             if (
                 not_changed_iter_cnt > self.hyper_params.max_iter
-                or not_changed_iter_cnt > rec_max_iter
+                # or not_changed_iter_cnt > rec_max_iter
             ):
                 if log_level >= LogLevel.INFO:
                     print(f"reach max iter {self.hyper_params.max_iter}")

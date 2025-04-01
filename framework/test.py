@@ -11,7 +11,7 @@ from .task import Task, TaskManager, generate_task_list, generate_task_dict_list
 from .coalition_manager import CoalitionManager
 from .mrta_solver import MRTASolver
 from .utils import evaluate_assignment, EvalResult, calculate_map_shape_on_mana
-from .utils import format_json
+from .utils import format_with_prettier
 from . import utils
 from . import task
 from . import uav
@@ -53,7 +53,7 @@ def test_solver(
     return coalition_mana, eval_reuslt
 
 
-def run_test(solver_types: List[Type[MRTASolver]], test_case_path: str):
+def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str):
     results: List[EvalResult] = []
     with open(test_case_path, "r") as f:
         data = json.load(f)
@@ -77,9 +77,9 @@ def run_test(solver_types: List[Type[MRTASolver]], test_case_path: str):
         )
         results.append(eval_reuslt)
         coalition_mana: CoalitionManager
-        coalition_mana.plot_map(
-            uav_manager, task_manager, hyper_params, output_path=None, show=True
-        )
+        # coalition_mana.plot_map(
+        #     uav_manager, task_manager, hyper_params, output_path=None, show=True
+        # )
     return results
 
 
@@ -131,48 +131,70 @@ class SaveResult:
         return flattened_dict
 
 
+import yaml
+from pathlib import Path
+
+
+def save_results(results: List[SaveResult], file_path: str, comments: List[str] = []):
+    file_path: Path = Path(file_path)
+    save_result_dict_list = [result.to_dict() for result in results]
+    with open(file_path, "w") as f:
+        if file_path.suffix == ".json":
+            json.dump(save_result_dict_list, f, indent=4)
+        elif file_path.suffix == ".yaml":
+            # add header comments
+            for comment in comments:
+                f.write(f"# {comment}\n")
+            yaml.dump(save_result_dict_list, f)
+        else:
+            raise ValueError(f"Unsupported file type: {file_path}")
+
+    format_with_prettier(file_path)
+
+
+def read_results(
+    file_path: str,
+) -> List[SaveResult]:
+    with open(file_path, "r") as f:
+        if file_path.endswith(".json"):
+            save_result_dict_list = json.load(f)
+        elif file_path.endswith(".yaml"):
+            save_result_dict_list = yaml.safe_load(f)
+        else:
+            raise ValueError(f"Unsupported file type: {file_path}")
+    results = []
+    for save_result_dict in save_result_dict_list:
+        result = SaveResult.from_dict(save_result_dict)
+        results.append(result)
+    return results
+
+
+def visualize_results(
+    result_list: List[SaveResult], x: str, labels=["elapsed_time"], choices: List[str] = []
+):
+    result_fdict_list = [d.to_flattened_dict() for d in result_list]
+    df = pd.DataFrame(result_fdict_list)
+    for label in labels:
+        plt.figure(figsize=(15, 10))
+        # choices
+        if choices:
+            df = df[df["solver_name"].isin(choices)]
+        sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
+        # sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
+        # sns.violinplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, split=True)
+
+        plt.title(f"Boxplot of {label} by {x} and Solvers")
+        plt.xlabel(f"{x}")
+        plt.ylabel(f"{label}")
+        plt.legend(title="Solver Name")
+        plt.grid(True)
+        plt.show()
+
+
 class TestFramework:
     """
     指定方法列表和超参数，自动进行测试，得到每种方法的结果和评价指标，进行分析与可视化
     """
-
-    @staticmethod
-    def save_results(
-        results: List[SaveResult],
-        file_path: str,
-    ):
-        save_result_dict_list = [result.to_dict() for result in results]
-        print(len(save_result_dict_list))
-        with open(file_path, "w") as f:
-            json.dump(save_result_dict_list, f, indent=4)
-        format_json(file_path)
-
-    @staticmethod
-    def read_results(file_path: str) -> List[SaveResult]:
-        with open(file_path, "r") as f:
-            save_result_dict_list = json.load(f)
-        results = []
-        for save_result_dict in save_result_dict_list:
-            result = SaveResult.from_dict(save_result_dict)
-
-            results.append(result)
-        return results
-
-    @staticmethod
-    def visualize_results(result_list: List[SaveResult], x: str, labels=["elapsed_time"]):
-        result_fdict_list = [d.to_flattened_dict() for d in result_list]
-        df = pd.DataFrame(result_fdict_list)
-        for label in labels:
-            plt.figure(figsize=(15, 10))
-            sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
-            # sns.violinplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, split=True)
-
-            plt.title(f"Boxplot of {label} by {x} and Solvers")
-            plt.xlabel(f"{x}")
-            plt.ylabel(f"{label}")
-            plt.legend(title="Solver Name")
-            plt.grid(True)
-            plt.show()
 
 
 def random_test(task_num, uav_num, gen_params: GenParams, solver_type: Type[MRTASolver]):
@@ -237,25 +259,6 @@ class TestNums(TestFramework):
                     results.append(save_result)
 
         return results
-
-    @staticmethod
-    def visualize_results(result_list: List[SaveResult], x="uav_num", labels=["elapsed_time"]):
-        result_fdict_list = [d.to_flattened_dict() for d in result_list]
-        df = pd.DataFrame(result_fdict_list)
-        # print(df.info())
-        # exit()
-        for label in labels:
-            plt.figure(figsize=(15, 10))
-            sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
-            # sns.violinplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, split=True)
-
-            plt.title(f"Boxplot of {label} by {x} and Solvers")
-            plt.xlabel(f"{x}")
-            plt.ylabel(f"{label}")
-            plt.legend(title="Solver Name")
-            plt.grid(True)
-
-            plt.show()
 
 
 class TestHyperParams(TestFramework):

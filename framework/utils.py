@@ -59,7 +59,7 @@ def calculate_map_shape_on_mana(uav_manager: UAVManager, task_manager: TaskManag
     max_y = max(entity.position.y for entity in entities_list)
     max_z = max(entity.position.z for entity in entities_list)
 
-    return (max_x + 1, max_y + 1, max_z + 1)
+    return [max_x + 1, max_y + 1, max_z + 1]
 
 
 def calculate_map_shape_on_list(uav_list: List[UAV], task_list: List[UAV]):
@@ -68,7 +68,7 @@ def calculate_map_shape_on_list(uav_list: List[UAV], task_list: List[UAV]):
     max_y = max(entity.position.y for entity in entities_list)
     max_z = max(entity.position.z for entity in entities_list)
 
-    return (max_x + 1, max_y + 1, max_z + 1)
+    return [max_x + 1, max_y + 1, max_z + 1]
 
 
 def calculate_map_shape_on_dict_list(uav_dict_list: List[UAV], task_sict_list: List[UAV]):
@@ -77,7 +77,7 @@ def calculate_map_shape_on_dict_list(uav_dict_list: List[UAV], task_sict_list: L
     max_y = max(item["position"][1] for item in dict_list)
     max_z = max(item["position"][2] for item in dict_list)
 
-    return (max_x + 1, max_y + 1, max_z + 1)
+    return [max_x + 1, max_y + 1, max_z + 1]
 
 
 def calculate_obtained_resources(
@@ -208,13 +208,13 @@ def evaluate_assignment(
     )
 
 
-def format_json(json_file_path, config_path=".prettierrc"):
+def format_with_prettier(file_path, config_path=".prettierrc"):
     try:
         # 调用 Prettier 命令行工具
-        subprocess.run(["prettier", "--write", json_file_path], check=True)
-        print(f"'{json_file_path}' has been formatted with Prettier.")
+        subprocess.run(["prettier", "--write", file_path])
+        print(f"'{file_path}' has been formatted with Prettier.")
     except subprocess.CalledProcessError as e:
-        print(f"Error formatting JSON file with Prettier: {e}")
+        print(f"Error formatting {file_path} file with Prettier: {e}")
     except FileNotFoundError:
         print("Prettier is not installed or not found in your system PATH.")
 
@@ -228,7 +228,7 @@ def save_uavs_and_tasks(uav_manager: UAVManager, task_manager: TaskManager, outp
 
     with open(output_file_path, "w") as f:
         json.dump(data, f)
-    format_json(output_file_path)
+    format_with_prettier(output_file_path)
 
 
 import pandas as pd

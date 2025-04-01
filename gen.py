@@ -4,7 +4,7 @@ import json
 import random
 import argparse
 
-from framework.utils import format_json
+from framework.utils import format_with_prettier
 from framework.uav import UAVGenParams, generate_uav_dict_list
 from framework.task import TaskGenParams, generate_task_dict_list
 from dataclasses import dataclass, field
@@ -70,7 +70,7 @@ def gen_iros2024_case(out_path):
     with open(out_path, "w") as f:
         json.dump(data, f, indent=4)
     print(f"Data saved to {out_path}")
-    format_json(out_path)
+    format_with_prettier(out_path)
 
 
 def gen_csci2024_data(out_path):
@@ -117,7 +117,7 @@ def gen_csci2024_data(out_path):
     with open(out_path, "w") as f:
         json.dump(data, f, indent=4)
     print(f"Data saved to {out_path}")
-    format_json(out_path)
+    format_with_prettier(out_path)
 
 
 def gen_sim_test(out_path):

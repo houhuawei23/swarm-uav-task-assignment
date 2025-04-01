@@ -1,161 +1,184 @@
 import json
 import argparse
 
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import List
 
-from framework.base import HyperParams
-from framework.uav import UAV, UAVManager
-from framework.task import Task, TaskManager
-from framework.coalition_manager import CoalitionManager
-from framework.utils import calculate_map_shape_on_mana
-from framework.sim import SimulationEnv
-# from framework.test import TestFramework
-
-from solvers.driver import CmdArgs, run_solver, get_SolverTypes
-from solvers.icra2024 import AutoUAV
+import solvers
 
 
-def simple_run(uav_manager, task_manager, hyper_params, cmd_args: CmdArgs):
-    # run_enumeration(uav_manager, task_manager, hyper_params)
-    # run_coalition_game(uav_manager, task_manager, hyper_params)
-    run_solver(uav_manager, task_manager, hyper_params, cmd_args)
+@dataclass
+class CmdArgs:
+    output_path: Path
 
 
-def test_old(cmd_args: CmdArgs):
-    with open(cmd_args.test_case_path, "r") as f:
-        data = json.load(f)
-
-    UAVType = UAV
-    if cmd_args.choice == "icra":
-        UAVType = AutoUAV
-    print(f"Using UAV Type: {UAVType}")
-    uav_manager = UAVManager.from_dict(data["uavs"], UAVType)
-    task_manager = TaskManager.from_dict(data["tasks"])
-
-    hyper_params = HyperParams(
-        resources_num=data["resources_num"],
-        map_shape=calculate_map_shape_on_mana(uav_manager, task_manager),
-        alpha=1.0,
-        beta=10.0,
-        gamma=0.5,
-        mu=-1.0,
-        max_iter=10,
-    )
-
-    print(hyper_params)
-
-    uav_manager.format_print()
-    task_manager.format_print()
-
-    # 将字典转换为 JSON 并保存到文件
-    # save_uavs_and_tasks(uav_manager, task_manager, test_data_path)
-    # timeout = 10
-    # multi_processes_run(uav_manager, task_manager, hyper_params, timeout=timeout)
-    # simple_run(uav_manager, task_manager, hyper_params)
-    # coalition_manager = run_solver(uav_manager, task_manager, hyper_params, cmd_args)
-    solver_types = get_SolverTypes([cmd_args.choice])
-
-    from framework.test import run_test
-
-    results = run_test(solver_types, cmd_args.test_case_path)
-    # sim_env = SimulationEnv(uav_manager, task_manager, coalition_manager, hyper_params)
-    # sim_env.run()
-    # sim_env.visualize_simulation()
+@dataclass
+class TestCmdArgs(CmdArgs):
+    test_case: str
+    choices: List[str]
+    timeout: float
+    uav_nums: List[int]
+    task_nums: List[int]
+    random_test_times: int
+    hp_values: List
 
 
-from framework.test import TestNums, TestHyperParams
+@dataclass
+class ShowCmdArgs(CmdArgs):
+    file_path: str
+    x: str
+    labels: List[str]
+    choices: List[str]
 
 
-def main():
+import framework.test as test
+
+
+def init_cmd_args():
     parser = argparse.ArgumentParser(description="Coalition Formation Game Simulation")
-    # test_case
-    parser.add_argument(
-        "--test_case", type=str, default="../tests/case1.json", help="path to the test case file"
-    )
-    parser.add_argument(
-        "--choice", type=str, default="csci", help="choice of algorithm: enum, iros, csci"
-    )
-    parser.add_argument(
-        "--output", type=str, default="./.images/.result.png", help="path to the output file"
-    )
-    parser.add_argument("--uav_nums", nargs="+", type=int, default=[10, 40], help="uav_num list")
-    parser.add_argument(
-        "--task_nums", nargs="+", type=int, default=[10, 40], help="number of tasks"
-    )
-    parser.add_argument("--hp_values", nargs="+", help="hyper params values")
 
-    parser.add_argument("--choices", nargs="+", type=str, help="choices of algorithms")
-    parser.add_argument("--timeout", type=int, default=10, help="timeout for each algorithm")
-    parser.add_argument("--show", action="store_true", help="whether to show the result")
+    subparsers = parser.add_subparsers(dest="command", help="sub-command help")
 
-    parser.add_argument(
+    # parser_test
+    parser_test = subparsers.add_parser("test", help="test the solver")
+
+    parser_test.add_argument("--test_case", type=str, help="path to the test case file")
+
+    parser_test.add_argument("--uav_nums", nargs="+", type=int, default=[40], help="uav_num list")
+    parser_test.add_argument(
+        "--task_nums", nargs="+", type=int, default=[20], help="number of tasks"
+    )
+    parser_test.add_argument("--hp_values", nargs="+", help="hyper params values")
+    parser_test.add_argument("--choices", nargs="+", type=str, help="choices of algorithms")
+
+    parser_test.add_argument("--timeout", type=int, default=10, help="timeout for each algorithm")
+    parser_test.add_argument(
         "--random_test_times", type=int, default=5, help="number of random test times"
     )
-
-    # parse args
-    args = parser.parse_args()
-    cmd_args: CmdArgs = CmdArgs(
-        test_case_path=args.test_case,
-        output_path=args.output,
-        choice=args.choice,
-        choices=args.choices,
-        timeout=args.timeout,
-        uav_nums=args.uav_nums,
-        task_nums=args.task_nums,
-        random_test_times=args.random_test_times,
+    parser_test.add_argument(
+        "-o", "--output", type=Path, default=None, help="path to the output file"
     )
-    print(cmd_args)
+    # parser_show
+    parser_show = subparsers.add_parser("show", help="show the results")
+    parser_show.add_argument("-f", "--file_path", type=str, help="path to the results file")
+    parser_show.add_argument("-x", "--xlabel", type=str, default="uav_num", help="x axis")
+    parser_show.add_argument(
+        "--labels", nargs="+", type=str, default=["elapsed_time"], help="labels"
+    )
+    parser_show.add_argument("--choices", nargs="*", type=str, help="choices of algorithms")
 
-    if cmd_args.test_case_path in ["uav_num", "task_num"]:
-        solver_types = get_SolverTypes(cmd_args.choices)
+    args = parser.parse_args()
+    return args
 
-        if cmd_args.test_case_path == "uav_num":
-            results = TestNums.run_vary_uav_nums(
-                cmd_args.uav_nums, solver_types, test_times=cmd_args.random_test_times
+
+all_labels = [
+    "elapsed_time",
+    "completion_rate",
+    "resource_use_rate",
+    "total_distance",
+    "total_energy",
+    "total_exploss",
+]
+
+
+def run_test_driver(cmd_args: TestCmdArgs):
+    solver_types = solvers.driver.get_SolverTypes(cmd_args.choices)
+    if cmd_args.test_case in ["uav_num", "task_num"]:
+        if cmd_args.test_case == "uav_num":
+            task_num = 20
+            if len(cmd_args.task_nums) == 1:
+                task_num = cmd_args.task_nums[0]
+
+            results = test.TestNums.run_vary_uav_nums(
+                cmd_args.uav_nums,
+                solver_types,
+                task_num=task_num,
+                test_times=cmd_args.random_test_times,
             )
-        elif cmd_args.test_case_path == "task_num":
-            results = TestNums.run_vary_task_nums(
-                cmd_args.task_nums, solver_types, test_times=cmd_args.random_test_times
+        elif cmd_args.test_case == "task_num":
+            uav_num = 40
+            if len(cmd_args.uav_nums) == 1:
+                uav_num = cmd_args.uav_nums[0]
+            results = test.TestNums.run_vary_task_nums(
+                cmd_args.task_nums,
+                solver_types,
+                uav_num=uav_num,
+                test_times=cmd_args.random_test_times,
             )
 
-        # results1 = TestUAVNumsBeta.read_results("./.results/results_uavnum_vary_iros.json")
-        # results2 = TestUAVNumsBeta.read_results("./.results/results_uavnum_vary_csci.json")
-        # results = results1 + results2
-        # results = TestUAVNumsBeta.read_results("./.results/results_uavnum_vary_all_mar22.json")
-        # results = TestUAVNumsBeta.read_results("./.results/results_uavnum_vary_all_acution.json")
-        labels = [
-            "elapsed_time",
-            "completion_rate",
-            "resource_use_rate",
-            "total_distance",
-            "total_energy",
-            "total_exploss",
-        ]
-        TestHyperParams.visualize_results(results, x=cmd_args.test_case_path, labels=labels)
-        # TestUAVNumsBeta.save_results(results, f"./.results/results_uavnum_vary_{cmd_args.choice}_acution.json")
-    elif cmd_args.test_case_path.startswith("hyper_params."):
-        solver_types = get_SolverTypes(cmd_args.choices)
-        if args.hp_values is None:
+    elif cmd_args.test_case.startswith("hyper_params."):
+        if cmd_args.hp_values is None:
             raise ValueError("hp_values must be provided")
-        hp_values = [float(v) for v in args.hp_values]
-        results = TestHyperParams.run_vary_hyper_params(
-            cmd_args.test_case_path,
+        hp_values = [float(v) for v in cmd_args.hp_values]
+        results = test.TestHyperParams.run_vary_hyper_params(
+            cmd_args.test_case,
             hp_values,
             solver_types,
             task_num=10,
             uav_num=100,
             test_times=cmd_args.random_test_times,
         )
-        labels = [
-            "elapsed_time",
-            "completion_rate",
-            "resource_use_rate",
-            "total_distance",
-            "total_energy",
-            "total_exploss",
-        ]
-        TestNums.visualize_results(results, x=cmd_args.test_case_path, labels=labels)
     else:
-        test_old(cmd_args)
+        results = test.run_on_test_case(solver_types, cmd_args.test_case)
+
+    comments = [
+        f"test_case: {cmd_args.test_case}",
+        f"choices: {cmd_args.choices}",
+        f"uav_nums: {cmd_args.uav_nums}",
+        f"task_nums: {cmd_args.task_nums}",
+        f"random_test_times: {cmd_args.random_test_times}",
+        f"hp_values: {cmd_args.hp_values}",
+        f"results num: {len(results)}",
+    ]
+    if cmd_args.test_case.endswith(".json"):
+        test_case_name = Path(cmd_args.test_case).stem
+    else:
+        test_case_name = cmd_args.test_case
+    save_path = Path(f"./.results/results_{test_case_name}_{'_'.join(cmd_args.choices)}.yaml")
+    if cmd_args.output_path is not None:
+        save_path = cmd_args.output_path
+        
+    test.save_results(results, save_path, comments)
+    print(f"results saved to {save_path}")
+
+
+def run_show_driver(cmd_args: ShowCmdArgs):
+    results = test.read_results(cmd_args.file_path)
+    labels = cmd_args.labels
+    if len(labels) == 1 and cmd_args.labels[0] == "all":
+        labels = all_labels
+    test.visualize_results(results, x=cmd_args.x, labels=labels, choices=cmd_args.choices)
+
+
+def main():
+    # parse args
+    args = init_cmd_args()
+    if args.command == "test":
+        cmd_args = TestCmdArgs(
+            test_case=args.test_case,
+            choices=args.choices,
+            timeout=args.timeout,
+            uav_nums=args.uav_nums,
+            task_nums=args.task_nums,
+            random_test_times=args.random_test_times,
+            hp_values=args.hp_values,
+            output_path=args.output,
+        )
+        print(cmd_args)
+        run_test_driver(cmd_args)
+    elif args.command == "show":
+        cmd_args = ShowCmdArgs(
+            output_path=None,
+            file_path=args.file_path,
+            x=args.xlabel,
+            labels=args.labels,
+            choices=args.choices,
+        )
+        print(cmd_args)
+        run_show_driver(cmd_args)
+    else:
+        raise ValueError("Invalid command")
 
 
 import cProfile

@@ -436,7 +436,7 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
                 print(f"Cur coalition set: {self.coalition_manager}")
             if iter_cnt >= self.hyper_params.max_iter:
                 if log_level >= LogLevel.DEBUG:
-                    print("Max iterations reached, may have dead loop")
+                    print(f"Max iterations {iter_cnt} reached, may have dead loop")
                 break  # break while
 
             iter_cnt += 1

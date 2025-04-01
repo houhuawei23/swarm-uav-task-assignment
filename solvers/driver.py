@@ -13,18 +13,6 @@ from framework.utils import evaluate_assignment
 from . import csci2024, iros2024, icra2024, acution_solver, enum_solver
 
 
-@dataclass
-class CmdArgs:
-    test_case_path: str
-    output_path: str
-    choice: str
-    choices: List[str]
-    timeout: float
-    uav_nums: List[int]
-    task_nums: List[int]
-    random_test_times: int
-
-
 def get_SolverType(choice: str) -> Type[MRTASolver]:
     if choice == "csci":
         return csci2024.ChinaScience2024_CoalitionFormationGame
@@ -45,7 +33,7 @@ def get_SolverType(choice: str) -> Type[MRTASolver]:
 
 
 def get_SolverTypes(choice_list: List[str]) -> List[Type[MRTASolver]]:
-    all_choices = ["csci", "iros", "icra", "acution"]
+    all_choices = ["csci", "iros", "icra", "iros2"]
     if len(choice_list) == 1 and choice_list[0] == "all":
         return [get_SolverType(choice) for choice in all_choices]
     else:
@@ -56,7 +44,8 @@ def run_solver(
     uav_manager: UAVManager,
     task_manager: TaskManager,
     hyper_params: HyperParams,
-    cmd_args: CmdArgs,
+    choice,
+    output_path,
     result_queue: Queue = None,
 ) -> CoalitionManager:
     print("---")
@@ -64,9 +53,7 @@ def run_solver(
         uav_manager.get_ids(), task_manager.get_ids()
     )
 
-    solver = get_SolverType(cmd_args.choice)(
-        uav_manager, task_manager, coalition_manager, hyper_params
-    )
+    solver = get_SolverType(choice)(uav_manager, task_manager, coalition_manager, hyper_params)
 
     start_time = time.time()
     solver.run_allocate()
@@ -76,36 +63,43 @@ def run_solver(
     if result_queue is not None:
         result_queue.put(elapsed_time)
 
-    print(f"{cmd_args.choice} Result: {coalition_manager}")
+    print(f"{choice} Result: {coalition_manager}")
 
     eval_reuslt = evaluate_assignment(
         uav_manager, task_manager, coalition_manager.task2coalition, hyper_params.resources_num
     )
     print(f"Eval Result: {eval_reuslt}")
     coalition_manager.plot_map(
-        uav_manager, task_manager, hyper_params, cmd_args.output_path, plot_unassigned=True
+        uav_manager, task_manager, hyper_params, output_path, plot_unassigned=True
     )
 
     return coalition_manager
 
 
-def multi_processes_run(uav_manager, task_manager, hyper_params: HyperParams, cmd_args: CmdArgs):
+def multi_processes_run(
+    uav_manager,
+    task_manager,
+    hyper_params: HyperParams,
+    choice: str,
+    output_path: str,
+    timeout: float,
+):
     q1 = Queue()  # 创建队列用于传递返回值
     q2 = Queue()
     # 启动两个进程
     p1 = Process(
         target=run_solver,
-        args=(uav_manager, task_manager, hyper_params, cmd_args, q1),
+        args=(uav_manager, task_manager, hyper_params, choice, output_path, q1),
     )
     p2 = Process(
         target=run_solver,
-        args=(uav_manager, task_manager, hyper_params, cmd_args, q2),
+        args=(uav_manager, task_manager, hyper_params, choice, output_path, q2),
     )
 
     p1.start()
     p2.start()
-    p1.join(timeout=cmd_args.timeout)  # in seconds
-    p2.join(timeout=cmd_args.timeout)
+    p1.join(timeout=timeout)  # in seconds
+    p2.join(timeout=timeout)
     if p1.is_alive():
         print("Enumeration process did not finish in time. Terminating...")
         p1.terminate()

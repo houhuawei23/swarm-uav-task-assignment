@@ -38,10 +38,10 @@ def test_autouav():
     hyper_params = HyperParams(
         resources_num=3,
         map_shape=calculate_map_shape_on_mana(uav_manager, task_manager),
-        alpha=1.0,
-        beta=10.0,
-        gamma=0.05,
-        mu=-1.0,
+        resource_contribution_weight=1.0,
+        path_cost_weight=10.0,
+        threat_loss_weight=0.05,
+        zero_resource_contribution_penalty=-1.0,
         max_iter=25,
     )
     uav1: AutoUAV = uav_manager.get(1)

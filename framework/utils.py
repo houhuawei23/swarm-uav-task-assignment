@@ -96,7 +96,7 @@ def calculate_obtained_resources(
     return obtained_resources
 
 
-def calculate_obtained_resources_beta(uav_coalition: List[UAV], resources_num: int):
+def calculate_obtained_resources_path_cost_weight(uav_coalition: List[UAV], resources_num: int):
     obtained_resources = np.zeros(resources_num)
     for uav in uav_coalition:
         obtained_resources += uav.resources

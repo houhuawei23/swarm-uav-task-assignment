@@ -23,7 +23,7 @@
   - [ ] Hybrid Methods
 - [ ] 算法复杂度分析。。。
 
-## Show Cases
+## plot Cases
 
 下图左侧为分配前示意图，右侧为联盟博弈分配得到的结果（简单样例 `case0.json`）。
 
@@ -53,36 +53,36 @@ $ python ./main.py --test_case uav_num --choices all --random_test_times 25 --ua
 $ python ./main.py --test_case task_num --choices iros csci --random_test_times 25 --task_nums 10 20 50 80 100
 
 # vary hyper params
-$ python ./main.py --test_case hyper_params.beta --choices csci --random_test_times 10 --hp_values 1.0 2.0 4.0 8.0 16.0 50.0
+$ python ./main.py --test_case hyper_params.path_cost_weight --choices csci --random_test_times 10 --hp_values 1.0 2.0 4.0 8.0 16.0 50.0
 
 # test case4.json
 python ./main.py test --test_case ./test_cases/case4.json --choices csci
 
 # test task num
 python ./main.py test --test_case task_num --choices all --random_test_times 5 --task_nums 10 20 40 80 --uav_nums 20 -o ./.results/results_task_num_all_0329.yaml
-python ./main.py show -f ./.results/results_task_num_all_0329.yaml -x task_num --labels all
+python ./main.py plot -f ./.results/results_task_num_all_0329.yaml -x task_num --labels all
 
 # test hyper params
 ## 资源贡献权重
-python ./main.py test --test_case hyper_params.alpha --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 -o ./.results/results_hyper_params_alpha_all_0329.yaml
-python ./main.py show -f ./.results/results_hyper_params_alpha_all_0329.yaml -x hyper_params.alpha --labels all
+python ./main.py test --test_case hyper_params.resource_contribution_weight --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 -o ./.results/results_hyper_params.resource_contribution_weight_all_0329.yaml
+python ./main.py plot -f ./.results/results_hyper_params.resource_contribution_weight_all_0329.yaml -x hyper_params.resource_contribution_weight --labels all --show --save_dir ./.results/results_hyper_params.resource_contribution_weight_all_0329
 
 ## 路径成本权重
-python ./main.py test --test_case hyper_params.beta --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 1.0 2.0 4.0 8.0 16.0 -o ./.results/results_hyper_params_beta_all_0329.yaml
-python ./main.py show -f ./.results/results_hyper_params_beta_all_0329.yaml -x hyper_params.beta --labels all
+python ./main.py test --test_case hyper_params.path_cost_weight --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 1.0 2.0 4.0 8.0 16.0 -o ./.results/results_hyper_params.path_cost_weight_all_0329.yaml
+python ./main.py plot -f ./.results/results_hyper_params.path_cost_weight_all_0329.yaml -x hyper_params.path_cost_weight --labels all 
 
 ## 威胁权重
-python ./main.py test --test_case hyper_params.gamma --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 -o ./.results/results_hyper_params_gamma_all_0329.yaml
-python ./main.py show -f ./.results/results_hyper_params_gamma_all_0329.yaml -x hyper_params.gamma --labels all
+python ./main.py test --test_case hyper_params.threat_loss_weight --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 -o ./.results/results_hyper_params_threat_loss_weight_all_0329.yaml
+python ./main.py plot -f ./.results/results_hyper_params_threat_loss_weight_all_0329.yaml -x hyper_params.threat_loss_weight --labels all
 
 python ./main.py test --test_case uav_num --choices all --random_test_times 25 --uav_nums 10 20 50 80 100 --task_nums 10
 
 ## 最大迭代次数
 python ./main.py test --test_case hyper_params.max_iter --choices all --random_test_times 10 --hp_values 1 2 3 4 10 15 -o ./.results/results_hyper_params_max_iter_all_0329.yaml
-python ./main.py show -f ./.results/results_hyper_params_max_iter_all_0329.yaml -x hyper_params.max_iter --labels all
+python ./main.py plot -f ./.results/results_hyper_params_max_iter_all_0329.yaml -x hyper_params.max_iter --labels all
 
 
-python ./main.py show -f ./.results/results_uav_num_all.json -x uav_num --labels all
+python ./main.py plot -f ./.results/results_uav_num_all.json -x uav_num --labels all
 ```
 
 ## Project Structure

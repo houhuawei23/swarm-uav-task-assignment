@@ -65,10 +65,10 @@ def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str):
         hyper_params = HyperParams(
             resources_num=data["resources_num"],
             map_shape=calculate_map_shape_on_mana(uav_manager, task_manager),
-            alpha=5.0,
-            beta=5.0,
-            gamma=0.05,
-            mu=-1.0,
+            resource_contribution_weight=5.0,
+            path_cost_weight=5.0,
+            threat_loss_weight=0.05,
+            zero_resource_contribution_penalty=-1.0,
             max_iter=10,
         )
 
@@ -130,13 +130,40 @@ class SaveResult:
             flattened_dict[f"eval_result.{key}"] = value
         return flattened_dict
 
+    @classmethod
+    def from_flattened_dict(cls, data: Dict):
+        return cls(
+            solver_name=data["solver_name"],
+            test_case_name=data["test_case_name"],
+            uav_num=data["uav_num"],
+            task_num=data["task_num"],
+            hyper_params=HyperParams.from_flattened_dict(
+                {
+                    key.split(".")[1]: value
+                    for key, value in data.items()
+                    if key.startswith("hyper_params.")
+                }
+            ),
+            eval_result=EvalResult.from_dict(
+                {
+                    key.split(".")[1]: value
+                    for key, value in data.items()
+                    if key.startswith("eval_result.")
+                }
+            ),
+        )
+
 
 import yaml
 from pathlib import Path
 
 
-def save_results(results: List[SaveResult], file_path: str, comments: List[str] = []):
-    file_path: Path = Path(file_path)
+def save_results(results: List[SaveResult], file_path: str | Path, comments: List[str] = []):
+    if type(file_path) is str:
+        file_path = Path(file_path)
+    if not file_path.parent.exists():
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
     save_result_dict_list = [result.to_dict() for result in results]
     with open(file_path, "w") as f:
         if file_path.suffix == ".json":
@@ -146,6 +173,9 @@ def save_results(results: List[SaveResult], file_path: str, comments: List[str] 
             for comment in comments:
                 f.write(f"# {comment}\n")
             yaml.dump(save_result_dict_list, f)
+        elif file_path.suffix == ".csv":
+            df = pd.DataFrame([result.to_flattened_dict() for result in results])
+            df.to_csv(file_path, index=False)
         else:
             raise ValueError(f"Unsupported file type: {file_path}")
 
@@ -153,24 +183,41 @@ def save_results(results: List[SaveResult], file_path: str, comments: List[str] 
 
 
 def read_results(
-    file_path: str,
+    file_path: str | Path,
 ) -> List[SaveResult]:
+    if type(file_path) is str:
+        file_path = Path(file_path)
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    flattened = False
     with open(file_path, "r") as f:
-        if file_path.endswith(".json"):
+        if file_path.suffix == ".json":
             save_result_dict_list = json.load(f)
-        elif file_path.endswith(".yaml"):
+        elif file_path.suffix == ".yaml":
             save_result_dict_list = yaml.safe_load(f)
+        elif file_path.suffix == ".csv":
+            df = pd.read_csv(file_path)
+            save_result_dict_list = df.to_dict(orient="records")
+            flattened = True
         else:
             raise ValueError(f"Unsupported file type: {file_path}")
     results = []
     for save_result_dict in save_result_dict_list:
-        result = SaveResult.from_dict(save_result_dict)
+        if flattened:
+            result = SaveResult.from_flattened_dict(save_result_dict)
+        else:
+            result = SaveResult.from_dict(save_result_dict)
         results.append(result)
     return results
 
 
 def visualize_results(
-    result_list: List[SaveResult], x: str, labels=["elapsed_time"], choices: List[str] = []
+    result_list: List[SaveResult],
+    x: str,
+    labels=["elapsed_time"],
+    choices: List[str] = [],
+    save_dir: Path = None,
+    show: bool = True,
 ):
     result_fdict_list = [d.to_flattened_dict() for d in result_list]
     df = pd.DataFrame(result_fdict_list)
@@ -183,12 +230,19 @@ def visualize_results(
         # sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
         # sns.violinplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, split=True)
 
-        plt.title(f"Boxplot of {label} by {x} and Solvers")
-        plt.xlabel(f"{x}")
-        plt.ylabel(f"{label}")
-        plt.legend(title="Solver Name")
+        plt.title(f"Boxplot of {label} by {x} and Solvers", fontdict={"fontsize": 20})
+        plt.xlabel(f"{x}", fontdict={"fontsize": 19})
+        plt.ylabel(f"{label}", fontdict={"fontsize": 19})
+        plt.legend(title="Solver Name", fontsize="large", title_fontsize="large")
+        # 设置坐标轴数字大小
+        plt.tick_params(axis="both", labelsize=12)  # 设置 x 轴和 y 轴的数字大小为 14
         plt.grid(True)
-        plt.show()
+        if save_dir is not None:
+            if not save_dir.exists():
+                save_dir.mkdir(parents=True)
+            plt.savefig(save_dir / f"{label}_{x}.png")
+        if show:
+            plt.show()
 
 
 class TestFramework:

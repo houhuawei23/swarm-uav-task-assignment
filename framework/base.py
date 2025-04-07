@@ -170,20 +170,20 @@ class HyperParams:
     Attributes:
         resources_num: int = 0 资源维度数.
         map_shape: Tuple[int, int, int] = (10, 10, 10) 任务环境区域大小.
-        alpha: float = 0.0 资源贡献权重.
-        beta: float = 0.0 路径成本权重.
-        gamma: float = 0.0 威胁权重.
-        mu: float = -1.0 ui 加入 tj 无资源贡献时的惩罚 (path_cost).
+        resource_contribution_weight: float = 0.0 资源贡献权重.
+        path_cost_weight: float = 0.0 路径成本权重.
+        threat_loss_weight: float = 0.0 威胁权重.
+        zero_resource_contribution_penalty: float = -1.0 ui 加入 tj 无资源贡献时的惩罚 (path_cost).
         max_iter: int = 0 最大迭代次数.
     """
 
     resources_num: int = 0  # 资源维度数
     # 任务环境区域大小
     map_shape: List[int] = field(default_factory=lambda: [10, 10, 10])
-    alpha: float = 1.0  # 资源贡献权重
-    beta: float = 10.0  # 路径成本权重
-    gamma: float = 1.0  # 威胁权重
-    mu: float = -1.0  # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
+    resource_contribution_weight: float = 1.0  # 资源贡献权重
+    path_cost_weight: float = 10.0  # 路径成本权重
+    threat_loss_weight: float = 1.0  # 威胁权重
+    zero_resource_contribution_penalty: float = -1.0  # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
     max_iter: int = 10  # 最大迭代次数
 
     def to_dict(self) -> Dict:
@@ -196,13 +196,25 @@ class HyperParams:
             "map_shape_x": self.map_shape[0],
             "map_shape_y": self.map_shape[1],
             "map_shape_z": self.map_shape[2],
-            "alpha": self.alpha,
-            "beta": self.beta,
-            "gamma": self.gamma,
-            "mu": self.mu,
+            "resource_contribution_weight": self.resource_contribution_weight,
+            "path_cost_weight": self.path_cost_weight,
+            "threat_loss_weight": self.threat_loss_weight,
+            "zero_resource_contribution_penalty": self.zero_resource_contribution_penalty,
             "max_iter": self.max_iter,
         }
         return flattened_dict
+
+    @classmethod
+    def from_flattened_dict(cls, data: Dict):
+        return cls(
+            resources_num=data["resources_num"],
+            map_shape=[data["map_shape_x"], data["map_shape_y"], data["map_shape_z"]],
+            resource_contribution_weight=data["resource_contribution_weight"],
+            path_cost_weight=data["path_cost_weight"],
+            threat_loss_weight=data["threat_loss_weight"],
+            zero_resource_contribution_penalty=data["zero_resource_contribution_penalty"],
+            max_iter=data["max_iter"],
+        )
 
     @classmethod
     def from_dict(cls, data: Dict):

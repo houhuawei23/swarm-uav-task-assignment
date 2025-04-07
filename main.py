@@ -30,6 +30,8 @@ class ShowCmdArgs(CmdArgs):
     x: str
     labels: List[str]
     choices: List[str]
+    save_dir: Path
+    show: bool
 
 
 import framework.test as test
@@ -60,14 +62,15 @@ def init_cmd_args():
         "-o", "--output", type=Path, default=None, help="path to the output file"
     )
     # parser_show
-    parser_show = subparsers.add_parser("show", help="show the results")
-    parser_show.add_argument("-f", "--file_path", type=str, help="path to the results file")
-    parser_show.add_argument("-x", "--xlabel", type=str, default="uav_num", help="x axis")
-    parser_show.add_argument(
+    parser_plot = subparsers.add_parser("plot", help="show the results")
+    parser_plot.add_argument("-f", "--file_path", type=Path, help="path to the results file")
+    parser_plot.add_argument("-x", "--xlabel", type=str, default="uav_num", help="x axis")
+    parser_plot.add_argument(
         "--labels", nargs="+", type=str, default=["elapsed_time"], help="labels"
     )
-    parser_show.add_argument("--choices", nargs="*", type=str, help="choices of algorithms")
-
+    parser_plot.add_argument("--choices", nargs="*", type=str, help="choices of algorithms")
+    parser_plot.add_argument("--save_dir", type=Path, default=None, help="path to the output file")
+    parser_plot.add_argument("--show", action="store_true", help="show the plot")
     args = parser.parse_args()
     return args
 
@@ -138,17 +141,26 @@ def run_test_driver(cmd_args: TestCmdArgs):
     save_path = Path(f"./.results/results_{test_case_name}_{'_'.join(cmd_args.choices)}.yaml")
     if cmd_args.output_path is not None:
         save_path = cmd_args.output_path
-        
+
     test.save_results(results, save_path, comments)
     print(f"results saved to {save_path}")
 
 
 def run_show_driver(cmd_args: ShowCmdArgs):
     results = test.read_results(cmd_args.file_path)
+    # test.save_results(results, "./.results.csv")
+    # exit()
     labels = cmd_args.labels
     if len(labels) == 1 and cmd_args.labels[0] == "all":
         labels = all_labels
-    test.visualize_results(results, x=cmd_args.x, labels=labels, choices=cmd_args.choices)
+    test.visualize_results(
+        results,
+        x=cmd_args.x,
+        labels=labels,
+        choices=cmd_args.choices,
+        save_dir=cmd_args.save_dir,
+        show=cmd_args.show,
+    )
 
 
 def main():
@@ -167,13 +179,15 @@ def main():
         )
         print(cmd_args)
         run_test_driver(cmd_args)
-    elif args.command == "show":
+    elif args.command == "plot":
         cmd_args = ShowCmdArgs(
             output_path=None,
             file_path=args.file_path,
             x=args.xlabel,
             labels=args.labels,
             choices=args.choices,
+            save_dir=args.save_dir,
+            show=args.show
         )
         print(cmd_args)
         run_show_driver(cmd_args)

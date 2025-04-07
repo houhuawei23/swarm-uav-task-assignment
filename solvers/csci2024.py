@@ -20,13 +20,18 @@ log_level: LogLevel = LogLevel.SILENCE
 
 
 def calculate_path_cost(
-    uav: UAV, task: Task, resource_contribution: float, map_shape: Tuple, mu: float = -1.0
+    uav: UAV, task: Task, resource_contribution: float, map_shape: Tuple, zero_resource_contribution_penalty: float = -1.0
 ):
     """Calculates the path cost for a UAV to reach a task.
 
     The path cost is computed based on the Euclidean distance between the UAV's current position and
     the task's position. The cost is normalized by the maximum possible distance in the environment.
     If the distance exceeds the maximum distance, the UAV is considered unable to reach the task.
+
+    range: [0, 1], 
+        0 means uav_to_task_distance is max,
+        1 means uav_to_task_distance is zero.
+    the larger the cost, the nearer the UAV is to the task, the better.
 
     当 val(ui, tj) <= 0 时, 设计 rui (tj) 小于 0.
     含义是当无人机 ui 加入任务 tj 联盟无法 贡献资源时, 加入该联盟的收益小于在 ct0 中的收益
@@ -40,7 +45,7 @@ def calculate_path_cost(
     """
     # 路径成本计算
     if resource_contribution <= 0:
-        return mu
+        return zero_resource_contribution_penalty
 
     # distance = np.linalg.norm(uav.position - task.position)
     distance = uav.position.distance_to(task.position)
@@ -134,10 +139,10 @@ def calculate_uav_benefit_4_join_task_coalition(
 
     O(1)
 
-    r(ui, tj) = alpha * val(ui, tj) + beta * cost(ui, tj) - gamma * risk(ui, tj)
+    r(ui, tj) = alpha * val(ui, tj) + path_cost_weight * cost(ui, tj) - threat_loss_weight * risk(ui, tj)
 
     The total benefit is a weighted sum of resource contribution, path cost, and threat cost.
-    The weights (alpha, beta, gamma) are used to balance the importance of each factor.
+    The weights (alpha, path_cost_weight, threat_loss_weight) are used to balance the importance of each factor.
 
     # epsilon(uav, task) =
     """
@@ -149,15 +154,15 @@ def calculate_uav_benefit_4_join_task_coalition(
     )
     # 计算路径成本
     path_cost = calculate_path_cost(
-        uav, task, resource_contribution, hyper_params.map_shape, hyper_params.mu
+        uav, task, resource_contribution, hyper_params.map_shape, hyper_params.zero_resource_contribution_penalty
     )
     # 计算威胁代价
     threat_cost = calculate_threat_cost(uav, task)
     # 总收益
     total_benefit = (
-        hyper_params.alpha * resource_contribution
-        + hyper_params.beta * path_cost
-        - hyper_params.gamma * threat_cost
+        hyper_params.resource_contribution_weight * resource_contribution
+        + hyper_params.path_cost_weight * path_cost
+        - hyper_params.threat_loss_weight * threat_cost
     )
     # check time window
     min_uav_fly_time = uav.position.distance_to(task.position) / uav.max_speed
@@ -252,7 +257,7 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
 
     R(ctj) 任务 tj 的联盟效用: R(ctj) = sum_{ui in ctj} [r(ui, tj)], 即执行该任务的所有无人机的效用之和。
     SR 任务分配问题的总收益: SR = sum_{ctj in CS} R(ctj)
-    ui 执行 tj 的收益: r(ui, tj) = alpha * val(ui, tj) + beta * dist(ui, tj) - gamma * risk(ui, tj)
+    ui 执行 tj 的收益: r(ui, tj) = alpha * val(ui, tj) + path_cost_weight * dist(ui, tj) - threat_loss_weight * risk(ui, tj)
     epsilon(eu, E_{-ui}) 无人机效用函数: epsilon(eu, E_{-ui}) = R(ctj) - R(ctj - {ui})
 
     Game Goal: 最大化总收益 SR

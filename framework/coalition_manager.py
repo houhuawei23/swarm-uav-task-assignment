@@ -37,14 +37,24 @@ class CoalitionManager:
         # return copy
         return copy.deepcopy(self)
 
-    def update_from_assignment(self, assignment: Dict[int, List[int]], uav_manager: UAVManager):
+    def update_from_assignment(
+        self, assignment: Dict[int | None, List[int]], uav_manager: UAVManager
+    ):
         self.task2coalition = copy.deepcopy(assignment)
         # self.task2coalition = assignment
         self.uav2task.clear()
 
+        assigned_uav_ids = set()
         for task_id, uav_ids in assignment.items():
             for uav_id in uav_ids:
                 self.uav2task[uav_id] = task_id
+                assigned_uav_ids.add(uav_id)
+
+        # update None coalition?
+        self.task2coalition[None] = []
+        for uav_id in uav_manager.get_ids():
+            if uav_id not in assigned_uav_ids:
+                self.task2coalition[None].append(uav_id)
 
     def assign(self, uav_id: int, task_id: int | None):
         """Assigns a UAV to a task, updating the coalitions dictionary.

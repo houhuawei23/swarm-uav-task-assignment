@@ -58,6 +58,10 @@ $ python ./main.py --test_case hyper_params.path_cost_weight --choices csci --ra
 # test case4.json
 python ./main.py test --test_case ./test_cases/case4.json --choices csci
 
+# test uav num
+python ./main.py test --test_case uav_num --choices all --random_test_times 5 --uav_nums 10 20 40 80 --task_nums 20 -o ./.results/results_uav_num_all_0329.yaml
+python ./main.py plot -f ./.results/results_uav_num_all_0329.yaml -x uav_num --labels all
+
 # test task num
 python ./main.py test --test_case task_num --choices all --random_test_times 5 --task_nums 10 20 40 80 --uav_nums 20 -o ./.results/results_task_num_all_0329.yaml
 python ./main.py plot -f ./.results/results_task_num_all_0329.yaml -x task_num --labels all

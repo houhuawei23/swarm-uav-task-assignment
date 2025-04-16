@@ -22,10 +22,11 @@ class TestCmdArgs(CmdArgs):
     task_nums: List[int]
     random_test_times: int
     hp_values: List
+    show: bool
 
 
 @dataclass
-class ShowCmdArgs(CmdArgs):
+class PlotCmdArgs(CmdArgs):
     file_path: str
     x: str
     labels: List[str]
@@ -61,6 +62,7 @@ def init_cmd_args():
     parser_test.add_argument(
         "-o", "--output", type=Path, default=None, help="path to the output file"
     )
+    parser_test.add_argument("--show", action="store_true", help="show the plot")
     # parser_show
     parser_plot = subparsers.add_parser("plot", help="show the results")
     parser_plot.add_argument("-f", "--file_path", type=Path, help="path to the results file")
@@ -123,7 +125,7 @@ def run_test_driver(cmd_args: TestCmdArgs):
             test_times=cmd_args.random_test_times,
         )
     else:
-        results = test.run_on_test_case(solver_types, cmd_args.test_case)
+        results = test.run_on_test_case(solver_types, cmd_args.test_case, cmd_args.show)
 
     comments = [
         f"test_case: {cmd_args.test_case}",
@@ -146,7 +148,7 @@ def run_test_driver(cmd_args: TestCmdArgs):
     print(f"results saved to {save_path}")
 
 
-def run_show_driver(cmd_args: ShowCmdArgs):
+def run_show_driver(cmd_args: PlotCmdArgs):
     results = test.read_results(cmd_args.file_path)
     # test.save_results(results, "./.results.csv")
     # exit()
@@ -176,18 +178,19 @@ def main():
             random_test_times=args.random_test_times,
             hp_values=args.hp_values,
             output_path=args.output,
+            show=args.show,
         )
         print(cmd_args)
         run_test_driver(cmd_args)
     elif args.command == "plot":
-        cmd_args = ShowCmdArgs(
+        cmd_args = PlotCmdArgs(
             output_path=None,
             file_path=args.file_path,
             x=args.xlabel,
             labels=args.labels,
             choices=args.choices,
             save_dir=args.save_dir,
-            show=args.show
+            show=args.show,
         )
         print(cmd_args)
         run_show_driver(cmd_args)

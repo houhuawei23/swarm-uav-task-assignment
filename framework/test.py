@@ -1,4 +1,4 @@
-from typing import List, Type, Dict
+from typing import List, Type, Dict, Tuple
 from dataclasses import dataclass, field
 import time
 import json
@@ -26,7 +26,7 @@ def test_solver(
     task_manager: TaskManager,
     uav_manager: UAVManager,
     hyper_params: HyperParams,
-):
+) -> Tuple[CoalitionManager, EvalResult]:
     coalition_mana: CoalitionManager = CoalitionManager(
         uav_manager.get_ids(), task_manager.get_ids()
     )
@@ -53,33 +53,42 @@ def test_solver(
     return coalition_mana, eval_reuslt
 
 
-def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str):
+def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, show: bool = False):
     results: List[EvalResult] = []
     with open(test_case_path, "r") as f:
         data = json.load(f)
-
+    hyper_params = HyperParams(
+        resources_num=data["resources_num"],
+        map_shape=utils.calculate_map_shape_on_dict_list(data["uavs"], data["tasks"]),
+        resource_contribution_weight=5.0,
+        path_cost_weight=5.0,
+        threat_loss_weight=0.05,
+        zero_resource_contribution_penalty=-1.0,
+        max_iter=10,
+    )
     for solver_type in solver_types:
         print(f"Running {solver_type.type_name()}...")
         uav_manager = UAVManager.from_dict(data["uavs"], solver_type.uav_type())
         task_manager = TaskManager.from_dict(data["tasks"])
-        hyper_params = HyperParams(
-            resources_num=data["resources_num"],
-            map_shape=calculate_map_shape_on_mana(uav_manager, task_manager),
-            resource_contribution_weight=5.0,
-            path_cost_weight=5.0,
-            threat_loss_weight=0.05,
-            zero_resource_contribution_penalty=-1.0,
-            max_iter=10,
-        )
 
         coalition_mana, eval_reuslt = test_solver(
             solver_type, task_manager, uav_manager, hyper_params
         )
-        results.append(eval_reuslt)
-        coalition_mana: CoalitionManager
-        # coalition_mana.plot_map(
-        #     uav_manager, task_manager, hyper_params, output_path=None, show=True
-        # )
+        save_result = SaveResult(
+            solver_type.type_name(),
+            test_case_path,
+            len(uav_manager.get_ids()),
+            len(task_manager.get_ids()),
+            hyper_params,
+            eval_reuslt,
+            task2coalition=coalition_mana.get_task2coalition().copy(),
+        )
+        results.append(save_result)
+        # coalition_mana: CoalitionManager
+        if show:
+            coalition_mana.plot_map(
+                uav_manager, task_manager, hyper_params, output_path=None, show=True
+            )
     return results
 
 
@@ -91,7 +100,7 @@ class SaveResult:
     task_num: int
     hyper_params: HyperParams
     eval_result: EvalResult
-    # task2coalition: Dict[int | None, List[int]]
+    task2coalition: Dict[int | None, List[int]] = None
 
     def to_dict(self):
         return {
@@ -101,7 +110,7 @@ class SaveResult:
             "task_num": self.task_num,
             "hyper_params": self.hyper_params.to_dict(),
             "eval_result": self.eval_result.to_dict(),
-            # "task2coalition": self.task2coalition,
+            "task2coalition": self.task2coalition,
         }
 
     @classmethod
@@ -113,7 +122,7 @@ class SaveResult:
             task_num=data["task_num"],
             hyper_params=HyperParams.from_dict(data["hyper_params"]),
             eval_result=EvalResult.from_dict(data["eval_result"]),
-            # task2coalition=data["task2coalition"],
+            task2coalition=data.get("task2coalition", None),
         )
 
     def to_flattened_dict(self):
@@ -151,6 +160,7 @@ class SaveResult:
                     if key.startswith("eval_result.")
                 }
             ),
+            # task2coalition=data.get("task2coalition", None),
         )
 
 

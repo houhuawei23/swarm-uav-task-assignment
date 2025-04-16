@@ -13,10 +13,6 @@ from framework.utils import calculate_obtained_resources
 log_level: LogLevel = LogLevel.SILENCE
 
 
-from typing import List, Dict
-import random
-import numpy as np
-
 from . import iros2024
 
 

@@ -92,10 +92,18 @@ class Task(Entity):
 
 @dataclass
 class TaskManager(EntityManager):
-    def __init__(self, tasks: List[Task] = []):
+    """
+    TaskManager is a class that manages a list of tasks.
+    """
+
+    free_uav_task_id = 0
+
+    def __init__(self, tasks: List[Task], resources_num: int):
         super().__init__(tasks)
         self.max_execution_time = max(task.execution_time for task in tasks)
         self.min_execution_time = min(task.execution_time for task in tasks)
+        # init free_uav_task
+        self.get_free_uav_task(resources_num)
 
     def get(self, id) -> Task:
         return super().get(id)
@@ -104,14 +112,32 @@ class TaskManager(EntityManager):
         return super().get_all()
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data, resources_num: int):
         tasks = [Task.from_dict(task_data) for task_data in data]
-        return cls(tasks)
+        return cls(tasks, resources_num)
 
     def format_print(self):
         print(f"TaskManager with {len(self)} tasks.")
         for task in self.get_all():
             print(f"  {task}")
+
+    def get_free_uav_task(self, resources_num: int):
+        if TaskManager.free_uav_task_id not in self.get_ids():
+            free_uav_task = Task(
+                id=TaskManager.free_uav_task_id,
+                position=Point([0, 0, 0]),
+                required_resources=np.zeros(resources_num),
+                time_window=[0, 0],
+                threat=0,
+                execution_time=0,
+            )
+            self.add(free_uav_task)
+        else:
+            free_uav_task = self.get(TaskManager.free_uav_task_id)
+        if free_uav_task.required_resources.size != resources_num:
+            # free_uav_task.required_resources = np.zeros(resources_num)
+            raise ValueError(f"free_uav_task.required_resources.size != resources_num")
+        return free_uav_task
 
 
 @dataclass

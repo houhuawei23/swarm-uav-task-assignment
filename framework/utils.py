@@ -132,6 +132,8 @@ def calculate_resource_use_rate(
     unused_resources = np.zeros(resources_num)
     task_list = task_manager.get_all()
     for task in task_list:
+        if task.id == TaskManager.free_uav_task_id:
+            continue
         obtained = calculate_obtained_resources(task2coalition[task.id], uav_manager, resources_num)
         all_input_resources += obtained
         unused_resources += np.maximum(obtained - task.required_resources, 0)
@@ -142,24 +144,25 @@ def calculate_resource_use_rate(
 
 
 def calculate_total_distance(
-    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int | None, List[int]]
+    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int, List[int]]
 ):
     total_distance = 0.0
     for task_id, coalition in task2coalition.items():
-        if task_id is not None:
-            task = task_manager.get(task_id)
-            uavs = [uav_manager.get(uav_id) for uav_id in coalition]
-            for uav in uavs:
-                total_distance += uav.position.distance_to(task.position)
+        if task_id == TaskManager.free_uav_task_id:
+            continue
+        task = task_manager.get(task_id)
+        uavs = [uav_manager.get(uav_id) for uav_id in coalition]
+        for uav in uavs:
+            total_distance += uav.position.distance_to(task.position)
     return total_distance
 
 
 def calculate_total_energy(
-    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int | None, List[int]]
+    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int, List[int]]
 ):
     total_energy = 0.0
     for task_id, coalition in task2coalition.items():
-        if task_id is not None:
+        if task_id != TaskManager.free_uav_task_id:
             task = task_manager.get(task_id)
             uavs = [uav_manager.get(uav_id) for uav_id in coalition]
             # breakpoint()
@@ -172,18 +175,19 @@ def calculate_total_energy(
 
 
 def calculate_total_exploss(
-    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int | None, List[int]]
+    uav_manager: UAVManager, task_manager: TaskManager, task2coalition: Dict[int, List[int]]
 ):
     """
     计算期望损失: sum(task.threat * uav.value)
     """
     total_exploss = 0.0
     for task_id, coalition in task2coalition.items():
-        if task_id is not None:
-            task = task_manager.get(task_id)
-            uavs = [uav_manager.get(uav_id) for uav_id in coalition]
-            for uav in uavs:
-                total_exploss += task.threat * uav.value
+        if task_id == TaskManager.free_uav_task_id:
+            continue
+        task = task_manager.get(task_id)
+        uavs = [uav_manager.get(uav_id) for uav_id in coalition]
+        for uav in uavs:
+            total_exploss += task.threat * uav.value
     return total_exploss
 
 

@@ -10,6 +10,7 @@ from framework.coalition_manager import CoalitionManager
 from framework.mrta_solver import MRTASolver
 from framework.utils import calculate_obtained_resources
 
+
 def generate_all_assignments(uav_ids: List[int], task_ids: List[int]) -> List[Dict[int, List[int]]]:
     """
     Generates all possible assignments of tasks to UAVs.
@@ -87,6 +88,10 @@ class EnumerationSolver(MRTASolver):
     Implements an enumeration (brute-force) algorithm for task assignment.
     This algorithm checks all possible combinations of UAVs and tasks.
     """
+
+    @classmethod
+    def type_name(cls):
+        return "Enumeration"
 
     def run_allocate(self):
         """

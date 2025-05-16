@@ -167,6 +167,10 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
         # uav_id -> int
         self.update_steps = {uav.id: 1 for uav in uav_manager.get_all()}
 
+    @classmethod
+    def type_name(cls):
+        return "IROS2024_LiwangZhang"
+
     def allocate_once(self, uav_list: List[UAV]):
         """
         Complexity: O(uav_list.size() x m x n)
@@ -175,14 +179,14 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
         changed = False
         # random sample allocate
         task_ids = self.task_manager.get_ids().copy()
-        task_ids.append(None)
+        task_ids.append(TaskManager.free_uav_task_id)
         for uav in uav_list:
             for taskj_id in task_ids:  # try to divert to another task (not have None task)
                 taski_id = self.coalition_manager.get_taskid(uav.id)
                 if taski_id == taskj_id:  # taski == taskj, jump (may be both None)
                     continue
 
-                if taski_id is None:  # not assigned to any task
+                if taski_id == TaskManager.free_uav_task_id:  # not assigned to any task
                     # try to divert to taskj
                     ui = 0
                 else:
@@ -206,8 +210,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
                         self.hyper_params,
                     )  # O(n)
 
-                if taskj_id is None:  # try to divert to taskj (None task)
-                    taskj = None
+                if taskj_id == TaskManager.free_uav_task_id:  # try to divert to taskj (None task)
                     uj = 0
                 else:
                     taskj = self.task_manager.get(taskj_id)
@@ -231,7 +234,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
                 if ui < uj:
                     # uav leave taski, join taskj
                     self.coalition_manager.unassign(uav.id)
-                    self.coalition_manager.assign(uav.id, taskj.id if taskj is not None else None)
+                    self.coalition_manager.assign(uav.id, taskj_id)
                     # update self.update_steps
                     self.update_steps[uav.id] += 1
                     changed = True
@@ -264,6 +267,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
         while True:  # max_iter or 1/sample_rate
             if log_level >= LogLevel.INFO:
                 print(f"iter {not_changed_iter_cnt}")
+            
             if (
                 not_changed_iter_cnt > self.hyper_params.max_iter
                 or not_changed_iter_cnt > rec_max_iter
@@ -275,10 +279,7 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
             # check whether they are stable (based on game theory stability)
             # Warning: if not random sample, may be deadlock!!! vibrate!!!
             sampled_uavs = random.sample(uav_list, rec_sample_size)
-            # 以历史更新的次数为权重，从 uav_list 中取样
-            # weights = np.ones(len(sampled_uavs))
-            # weights = np.array([self.update_steps[uav.id] for uav in uav_list])
-            # sampled_uavs = random.choices(uav_list, weights=weights, k=rec_sample_size)
+            
             changed = self.allocate_once(sampled_uavs)  # sample_size x m x n
             # changed = self.allocate_once(self.uav_manager.get_all(), debug=debug)
             if not changed:
@@ -292,6 +293,10 @@ class IROS2024_CoalitionFormationGame(MRTASolver):
 
 
 class IROS2024_CoalitionFormationGame_2(IROS2024_CoalitionFormationGame):
+    @classmethod
+    def type_name(cls):
+        return "IROS2024_LiwangZhang2"
+
     def run_allocate(self):
         """
         min O(n x m x n)

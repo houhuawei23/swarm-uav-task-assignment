@@ -158,7 +158,7 @@ def test_task_manager():
     assert new_task2 == tasks[1]
 
     # 创建 TaskManager 对象
-    task_manager = TaskManager(tasks)
+    task_manager = TaskManager(tasks, 3)
 
     # 测试 TaskManager 的方法
     assert len(task_manager) == 2
@@ -170,7 +170,7 @@ def test_task_manager():
     assert len(task_manager_dict) == 2
 
     # 测试 TaskManager 的 from_dict 方法
-    task_manager_from_dict = TaskManager.from_dict(task_manager_dict)
+    task_manager_from_dict = TaskManager.from_dict(task_manager_dict, 3)
     assert len(task_manager_from_dict) == 2
 
     # 测试 TaskManager 的 max_execution_time 和 min_execution_time 属性

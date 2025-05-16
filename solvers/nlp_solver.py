@@ -19,6 +19,10 @@ class NLPSolverScipy(MRTASolver):
     Implements a NLP solver for task assignment using SciPy's optimizer.
     """
 
+    @classmethod
+    def type_name(cls):
+        return "MINLP_Scipy"
+
     def run_allocate(self):
         uavs = self.uav_manager.get_all()
         tasks = self.task_manager.get_all()
@@ -56,12 +60,17 @@ class NLPSolverScipy(MRTASolver):
                 coalition_size += z[i]
 
             # Weights (same as Pyomo version)
+            w_task_completion = 15.0
+            w_resource_util = 5.0
+            w_distance = 7.0
+            w_threat = 5.0
+            w_coalition = 1.0
             return -(
-                15.0 * task_completion
-                + 5.0 * resource_util
-                - 3.0 * distance_cost
-                - 2.0 * threat
-                - 1.0 * coalition_size
+                w_task_completion * task_completion
+                + w_resource_util * resource_util
+                - w_distance * distance_cost
+                - w_threat * threat
+                - w_coalition * coalition_size
             )
 
         # Constraints
@@ -129,6 +138,10 @@ class NLPSolverPyomo(MRTASolver):
     ):
         super().__init__(uav_manager, task_manager, coalition_manager, hyper_params)
 
+    @classmethod
+    def type_name(cls):
+        return "MINLP_Pyomo"
+
     def run_allocate(self):
         """Solve the task allocation problem using NLP with Pyomo."""
         model = pyo.ConcreteModel()
@@ -194,7 +207,7 @@ class NLPSolverPyomo(MRTASolver):
         # Weights (can be loaded from hyper_params)
         w_task_completion = 15.0
         w_resource_utilization = 5.0
-        w_distance = 3.0
+        w_distance = 7.0
         w_threat = 2.0
         w_coalition = 1.0
 

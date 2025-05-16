@@ -11,7 +11,7 @@ def test_coalition_manager():
     uavs = generate_uav_dict_list(3)
     tasks = generate_task_dict_list(3)
     uav_manager = UAVManager.from_dict(uavs)
-    task_manager = TaskManager.from_dict(tasks)
+    task_manager = TaskManager.from_dict(tasks, 3)
     uavs = uav_manager.get_all()
     tasks = task_manager.get_all()
     uav_manager.format_print()
@@ -86,13 +86,13 @@ def test_coalition_manager():
         coalition_manager,
         id(coalition_manager),
         id(coalition_manager.task2coalition),
-        id(coalition_manager.uav2task),
+        id(coalition_manager.uavid2taskid),
     )
     print(
         dcopy,
         id(dcopy),
         id(dcopy.task2coalition),
-        id(dcopy.uav2task),
+        id(dcopy.uavid2taskid),
     )
     assert id(coalition_manager) != id(dcopy)
     assert id(coalition_manager.task2coalition) != id(dcopy.task2coalition)

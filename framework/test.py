@@ -15,6 +15,8 @@ from .utils import format_with_prettier
 from . import utils
 from . import task
 from . import uav
+from . import sim
+
 
 import pandas as pd
 import seaborn as sns
@@ -69,7 +71,7 @@ def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, 
     for solver_type in solver_types:
         print(f"Running {solver_type.type_name()}...")
         uav_manager = UAVManager.from_dict(data["uavs"], solver_type.uav_type())
-        task_manager = TaskManager.from_dict(data["tasks"])
+        task_manager = TaskManager.from_dict(data["tasks"], hyper_params.resources_num)
 
         coalition_mana, eval_reuslt = test_solver(
             solver_type, task_manager, uav_manager, hyper_params
@@ -89,6 +91,8 @@ def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, 
             coalition_mana.plot_map(
                 uav_manager, task_manager, hyper_params, output_path=None, show=True
             )
+        # env = sim.SimulationEnv(uav_manager, task_manager, coalition_mana, hyper_params)
+        # env.run(10, debug_level=0)
     return results
 
 
@@ -100,7 +104,7 @@ class SaveResult:
     task_num: int
     hyper_params: HyperParams
     eval_result: EvalResult
-    task2coalition: Dict[int | None, List[int]] = None
+    task2coalition: Dict[int, List[int]] = None
 
     def to_dict(self):
         return {
@@ -232,7 +236,7 @@ def visualize_results(
     result_fdict_list = [d.to_flattened_dict() for d in result_list]
     df = pd.DataFrame(result_fdict_list)
     for label in labels:
-        plt.figure(figsize=(15, 10))
+        plt.figure(figsize=(12, 8))
         # choices
         if choices:
             df = df[df["solver_name"].isin(choices)]
@@ -240,17 +244,23 @@ def visualize_results(
         # sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
         # sns.violinplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, split=True)
 
-        plt.title(f"Boxplot of {label} by {x} and Solvers", fontdict={"fontsize": 20})
-        plt.xlabel(f"{x}", fontdict={"fontsize": 19})
-        plt.ylabel(f"{label}", fontdict={"fontsize": 19})
-        plt.legend(title="Solver Name", fontsize="large", title_fontsize="large")
-        # 设置坐标轴数字大小
-        plt.tick_params(axis="both", labelsize=12)  # 设置 x 轴和 y 轴的数字大小为 14
+        plt.title(
+            f"Boxplot of {label} by {x} and Solvers",
+            fontdict={"fontsize": 26, "fontweight": "bold"},
+        )
+        plt.xlabel(f"{x}", fontdict={"fontsize": 28})
+        plt.ylabel(f"{label}", fontdict={"fontsize": 28})
+        plt.legend(title="Solver Name", fontsize=22, title_fontsize=18, loc="upper left")
+        # 设置坐标轴数字大小, 加粗
+        plt.tick_params(axis="both", labelsize=24)
+        # tight
+        plt.tight_layout()
+
         plt.grid(True)
         if save_dir is not None:
             if not save_dir.exists():
                 save_dir.mkdir(parents=True)
-            plt.savefig(save_dir / f"{label}_{x}.png")
+            plt.savefig(save_dir / f"{label}_{x}.png", dpi=600)  # high dpi
         if show:
             plt.show()
 
@@ -269,7 +279,7 @@ def random_test(task_num, uav_num, gen_params: GenParams, solver_type: Type[MRTA
         map_shape=utils.calculate_map_shape_on_dict_list(uav_dict_list, task_dict_list),
     )
     uav_manager = UAVManager.from_dict(uav_dict_list, solver_type.uav_type())
-    task_manager = TaskManager.from_dict(task_dict_list)
+    task_manager = TaskManager.from_dict(task_dict_list, hyper_params.resources_num)
 
     coalition_mana, eval_result = test_solver(solver_type, task_manager, uav_manager, hyper_params)
 
@@ -361,7 +371,7 @@ class TestHyperParams(TestFramework):
                         uav_num, uav.UAVGenParams(**gen_params.__dict__)
                     )
 
-                    task_manager = TaskManager.from_dict(task_dict_list)
+                    task_manager = TaskManager.from_dict(task_dict_list, gen_params.resources_num)
                     uav_manager = UAVManager.from_dict(uav_dict_list, solver_type.uav_type())
                     hyper_params = HyperParams(
                         **{hp_choice: value},

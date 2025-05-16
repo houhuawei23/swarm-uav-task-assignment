@@ -10,7 +10,17 @@ from framework.coalition_manager import CoalitionManager
 from framework.mrta_solver import MRTASolver
 from framework.utils import evaluate_assignment
 
-from . import csci2024, iros2024, icra2024, acution_solver, enum_solver, milp_solver, nlp_solver
+from . import (
+    csci2024,
+    iros2024,
+    icra2024,
+    acution_solver,
+    enum_solver,
+    milp_solver,
+    nlp_solver,
+    centralized_solver,
+    distributed_solver
+)
 
 
 def get_SolverType(choice: str) -> Type[MRTASolver]:
@@ -36,12 +46,16 @@ def get_SolverType(choice: str) -> Type[MRTASolver]:
         return nlp_solver.NLPSolverScipy
     elif choice == "nlp_pyomo":
         return nlp_solver.NLPSolverPyomo
+    elif choice == "centralized":
+        return centralized_solver.CentralizedSolver
+    elif choice == "distributed":
+        return distributed_solver.DistributedSolver
     else:
         raise ValueError("Invalid choice")
 
 
 def get_SolverTypes(choice_list: List[str]) -> List[Type[MRTASolver]]:
-    all_choices = ["csci", "iros", "icra", "iros2", "milp"]
+    all_choices = ["csci", "iros", "icra", "iros2", "milp", "centralized", "nlp_pyomo"]
     if len(choice_list) == 1 and choice_list[0] == "all":
         return [get_SolverType(choice) for choice in all_choices]
     else:

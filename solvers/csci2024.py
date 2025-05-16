@@ -276,6 +276,10 @@ class ChinaScience2024_CoalitionFormationGame(MRTASolver):
     ):
         super().__init__(uav_manager, task_manager, coalition_manager, hyper_params)
 
+    @classmethod
+    def type_name(cls):
+        return "CSCI2024_Xue"
+
     def cal_benefit_matrix(self, unassigned_uav_ids: List[int], task_ids: List[int]) -> np.ndarray:
         """Calculates the benefit matrix for UAVs and tasks. 计算每个无人机对每个任务的收益矩阵
 

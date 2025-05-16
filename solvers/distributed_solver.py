@@ -1,23 +1,27 @@
 from typing import List, Tuple, Dict, Type
 import random
 import numpy as np
+from itertools import combinations
+from math import factorial
 from dataclasses import dataclass, field
 from copy import deepcopy
 
+
 from framework.base import HyperParams, LogLevel
-from framework.uav import UAV, UAVManager
-from framework.task import Task, TaskManager
+from framework.uav import UAV, UAVManager, generate_uav_list, UAVGenParams
+from framework.task import (
+    Task,
+    TaskManager,
+    generate_task_list,
+    TaskGenParams,
+)
 from framework.coalition_manager import CoalitionManager
 from framework.mrta_solver import MRTASolver
+import framework.utils as utils
 
-# from .iros2024 import cal_uav_utility_in_colition
-from . import iros2024
-from . import csci2024
+from .utils import MRTA_CFG_Model, get_connected_components_uavid
 
-from .utils import get_connected_components_uavid
-
-
-log_level: LogLevel = LogLevel.SILENCE
+log_level: LogLevel = LogLevel.DEBUG
 
 
 @dataclass
@@ -137,57 +141,26 @@ class AutoUAV(UAV):
             if taski_id == taskj_id:
                 continue
 
-            if taski_id == TaskManager.free_uav_task_id:
-                ui = 0
-            else:
-                taski = self.task_manager.get(taski_id)
-                taski_coalition_copy = self.coalition_manager.get_coalition(taski_id).copy()
-                # cal utility in taski coalition
-                # ui = iros2024.cal_uav_utility_in_colition(
-                #     self,
-                #     taski,
-                #     taski_coalition_copy,
-                #     self.uav_manager,
-                #     self.task_manager,
-                #     self.hyper_params,
-                # )
-                ui = csci2024.cal_uav_utility_in_colition(
-                    self,
-                    taski,
-                    taski_coalition_copy,
-                    self.uav_manager,
-                    self.hyper_params,
-                )  # O(n)
-            if taskj_id == TaskManager.free_uav_task_id:
-                uj = 0
-            else:
-                taskj = self.task_manager.get(taskj_id)
-                taskj_coalition_copy = self.coalition_manager.get_coalition(taskj_id).copy()
-                # cal utility in taskj coalition
-                # print(f"taskj_coalition_copy: {taskj_coalition_copy}")
-                # uj = iros2024.cal_uav_utility_in_colition(
-                #     self,
-                #     taskj,
-                #     taskj_coalition_copy,
-                #     self.uav_manager,
-                #     self.task_manager,
-                #     self.hyper_params,
-                # )
-                uj = csci2024.cal_uav_utility_in_colition(
-                    self,
-                    taskj,
-                    taskj_coalition_copy,
-                    self.uav_manager,
-                    self.hyper_params,
-                )
+            taski = self.task_manager.get(taski_id)
+            taskj = self.task_manager.get(taskj_id)
+            prefer = "cooperative"
+            prefer_func = MRTA_CFG_Model.get_prefer_func(prefer)
+            if prefer_func(
+                self,
+                taski,
+                taskj,
+                self.uav_manager,
+                self.task_manager,
+                self.coalition_manager,
+                self.hyper_params.resources_num,
+            ):
+                # if true, uav leave taski, join taskj
+                # self.coalition_manager.format_print()  # check
 
-            if ui < uj:
-                # uav leave taski, join taskj
                 self.coalition_manager.unassign(self.id)
                 self.coalition_manager.assign(self.id, taskj_id)
                 divert_changed = True
-                self.uav_update_step_dict[self.id] += 1
-                # print(f"uav: {self.id}, divert_changed: {divert_changed}")
+                break  # if uav changed task, break, next uav
         self.changed = self.changed or divert_changed
         # print(f"[divert] uav: {self.id}, changed: {self.changed}")
         return divert_changed
@@ -205,7 +178,7 @@ class AutoUAV(UAV):
         return info
 
 
-class ICRA2024_CoalitionFormationGame(MRTASolver):
+class DistributedSolver(MRTASolver):
     """
     TODO: 该让不同component的无人机组之间能相互通信，通过leader uav...
     否则每一组无人机都是孤立进行任务分配，整体效能太差
@@ -280,7 +253,7 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
 
     @classmethod
     def type_name(cls):
-        return "ICRA2024_LiwangZhang"
+        return "Distributed"
 
     def init_allocate(self, components: List[List[int]], debug=False):
         """
@@ -404,104 +377,3 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
             leader_uav_id = component[0]
             leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
             self.coalition_manager.merge_coalition_manager(leader_uav.coalition_manager)
-
-
-class ICRA2024_CoalitionFormationGame_2(ICRA2024_CoalitionFormationGame):
-    @classmethod
-    def type_name(cls):
-        return "ICRA2024_LiwangZhang2"
-
-    def run_allocate(self):
-        """
-        每个uav是独立的个体，自己运行一套算法。
-        中控模拟程序只需要触发每个uav的动作，模拟uav之间的通信等。
-        """
-        # comm_distance = self.hyper_params.comm_distance
-        comm_distance = self.hyper_params.map_shape[0] / 3
-        uav_list = self.uav_manager.get_all()
-        components = get_connected_components_uavid(uav_list, comm_distance)  # max: O(n + n^2)
-        # print(f"components: {components}")
-
-        self.init_allocate(components)  # O(n)
-        if log_level >= LogLevel.DEBUG:
-            for uav in uav_list:
-                print(uav.debug_info())
-
-        iter_cnt = 0
-        sample_rate = 1 / 3
-        rec_max_iter = int(1 / sample_rate) + 1  # 期望来看，每个uav都会被抽样到
-
-        # Comlexity: max_iter x O(n^2 m)
-        while True:  # sim step
-            # print(f"iter {iter_cnt}")
-            if iter_cnt > self.hyper_params.max_iter or iter_cnt > rec_max_iter:
-                # print(f"reach max iter {self.hyper_params.max_iter}")
-                break
-
-            total_changed = False
-            # Complexity:
-            # n x sample_rate x O(n m) + O(n x component.size() x n)
-            # max: O(n^2 m) + O(n^3)
-            for component in components:
-                # Warning: if not random sample, may be deadlock!!! vibrate!!!
-                rec_sample_size = max(1, int(len(component) * sample_rate))
-                sampled_uavids = random.sample(component, rec_sample_size)
-                messages: List[Message] = []
-                component_changed = False
-                # for uav_id in component:
-                for uav_id in sampled_uavids:
-                    uav: AutoUAV = self.uav_manager.get(uav_id)
-                    uav.changed = False
-                    uav.try_divert()  # random, O(n m)
-                    msg = uav.send_msg()
-                    messages.append(msg)
-                    if log_level >= LogLevel.DEBUG:
-                        print(uav.debug_info())
-
-                for uav_id in component:  # O(component.size()^2 x n)
-                    uav: AutoUAV = self.uav_manager.get(uav_id)
-                    uav.receive_and_update(messages)  # max: O(n^2)
-                    if log_level >= LogLevel.DEBUG:
-                        print(uav.debug_info())
-
-                component_changed = any(msg.changed for msg in messages)
-                total_changed = total_changed or component_changed
-            # TODO: leader follower, leader communication
-            leader_messages: List[Message] = []  # component.size()
-            for component in components:
-                if len(component) == 0:
-                    continue
-                leader_uav_id = component[0]
-                leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
-                msg = leader_uav.send_msg()
-                leader_messages.append(msg)
-
-            # Complexity: components.size() x components.size() x n
-            for component in components:  # components.size()
-                if len(component) == 0:
-                    continue
-                leader_uav_id = component[0]
-                leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
-                leader_uav.receive_and_update(leader_messages)
-
-            leaders_changed = any(msg.changed for msg in leader_messages)
-            total_changed = total_changed or leaders_changed
-
-            # print(f"total_changed: {total_changed}")
-            if not total_changed:
-                if log_level >= LogLevel.INFO:
-                    print("all uav not changed, break!")
-                break
-
-            iter_cnt += 1
-        # remember to update the self.coalition_manager!
-        for component in components:
-            if len(component) == 0:
-                continue
-            leader_uav_id = component[0]
-            leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
-            self.coalition_manager.merge_coalition_manager(leader_uav.coalition_manager)
-
-
-if __name__ == "__main__":
-    pass

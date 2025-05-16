@@ -29,6 +29,10 @@ class MILPSolver(MRTASolver):
     ):
         super().__init__(uav_manager, task_manager, coalition_manager, hyper_params)
 
+    @classmethod
+    def type_name(cls):
+        return "MILP"
+
     def run_allocate(self):
         """Solve the task allocation problem using MILP."""
         # Problem initialization
@@ -40,7 +44,11 @@ class MILPSolver(MRTASolver):
 
         # Create binary decision variables: x_ij = 1 if UAV i is assigned to task j
         x = LpVariable.dicts(
-            "assignment", [(uav.id, task.id) for uav in uav_list for task in task_list], 0, 1, cat="Binary"
+            "assignment",
+            [(uav.id, task.id) for uav in uav_list for task in task_list],
+            0,
+            1,
+            cat="Binary",
         )
 
         # Objective function components
@@ -73,14 +81,16 @@ class MILPSolver(MRTASolver):
         )
 
         # 5. Minimize threat cost (sum of threat indices of assigned tasks)
-        threat_cost = lpSum(x[(uav.id, task.id)] * task.threat for uav in uav_list for task in task_list)
+        threat_cost = lpSum(
+            x[(uav.id, task.id)] * task.threat for uav in uav_list for task in task_list
+        )
 
         # Combine objectives with weights (these could be part of hyper_params)
         # We maximize the positive terms and minimize the negative ones
         task_completion_weight = 15.0
         resource_utilization_weight = 5.0
-        resource_consumption_weight = 3.0
-        distance_weight = 3.0
+        resource_consumption_weight = 5.0
+        distance_weight = 5.0
         threat_weight = 2.0
         prob += (
             task_completion_weight * task_completion
@@ -160,7 +170,9 @@ class MILPSolverPyomo(MRTASolver):
 
         def resource_consumption():
             return sum(
-                model.x[(uav.id, task.id)] * np.sum(uav.resources) for uav in uav_list for task in task_list
+                model.x[(uav.id, task.id)] * np.sum(uav.resources)
+                for uav in uav_list
+                for task in task_list
             )
 
         def total_distance():
@@ -171,7 +183,9 @@ class MILPSolverPyomo(MRTASolver):
             )
 
         def threat_cost():
-            return sum(model.x[(uav.id, task.id)] * task.threat for uav in uav_list for task in task_list)
+            return sum(
+                model.x[(uav.id, task.id)] * task.threat for uav in uav_list for task in task_list
+            )
 
         # Weights from hyper-parameters or constants
         task_completion_weight = 15.0

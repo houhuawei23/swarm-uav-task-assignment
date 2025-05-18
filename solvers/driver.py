@@ -11,20 +11,25 @@ from framework.mrta_solver import MRTASolver
 from framework.utils import evaluate_assignment
 
 from . import (
+    auction_solver,
     csci2024,
     iros2024,
     icra2024,
-    acution_solver,
     enum_solver,
     milp_solver,
     nlp_solver,
     centralized_solver,
-    distributed_solver
+    distributed_solver,
+    brute_force_solver,
 )
 
 
 def get_SolverType(choice: str) -> Type[MRTASolver]:
-    if choice == "csci":
+    if choice == "enum":
+        return enum_solver.EnumerationSolver
+    elif choice == "brute_force":
+        return brute_force_solver.BruteForceSearchSolver
+    elif choice == "csci":
         return csci2024.ChinaScience2024_CoalitionFormationGame
     elif choice == "iros":
         return iros2024.IROS2024_CoalitionFormationGame
@@ -32,12 +37,10 @@ def get_SolverType(choice: str) -> Type[MRTASolver]:
         return iros2024.IROS2024_CoalitionFormationGame_2
     elif choice == "icra":
         return icra2024.ICRA2024_CoalitionFormationGame
-    elif choice == "acution":
-        return acution_solver.AcutionBiddingSolverKimi
-    elif choice == "acution_kimi":
-        return acution_solver.AcutionBiddingSolverKimi
-    elif choice == "enum":
-        return enum_solver.EnumerationSolver
+    elif choice == "auction":
+        return auction_solver.AuctionBiddingSolverAdvanced
+    elif choice == "auction_kimi":
+        return auction_solver.AuctionBiddingSolverKimi
     elif choice == "milp":
         return milp_solver.MILPSolver
     elif choice == "milp_pyomo":
@@ -53,9 +56,18 @@ def get_SolverType(choice: str) -> Type[MRTASolver]:
     else:
         raise ValueError("Invalid choice")
 
+choices_short2long = {
+    "csci": "CSCI2024_Xue",
+    "iros": "IROS2024_LiwangZhang",
+    "icra": "ICRA2024_LiwangZhang",
+    "milp": "MILP",
+    "nlp_pyomo": "MINLP_Pyomo",
+    "centralized": "Centralized",
+    "distributed": "Distributed"
+}
 
 def get_SolverTypes(choice_list: List[str]) -> List[Type[MRTASolver]]:
-    all_choices = ["csci", "iros", "icra", "iros2", "milp", "centralized", "nlp_pyomo"]
+    all_choices = ["csci", "iros", "icra", "milp", "nlp_pyomo", "centralized", "distributed"]
     if len(choice_list) == 1 and choice_list[0] == "all":
         return [get_SolverType(choice) for choice in all_choices]
     else:

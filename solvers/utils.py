@@ -1,4 +1,5 @@
 from typing import List, Tuple, Dict, Type
+from dataclasses import dataclass
 import random
 import numpy as np
 
@@ -16,6 +17,8 @@ import framework.utils as utils
 
 from itertools import combinations
 from math import factorial
+
+log_level = LogLevel.SILENCE
 
 
 # Problem Model
@@ -135,6 +138,16 @@ def eval_res_waste(req: float, obt: float) -> float:
         return (obt - req) / (req + 1)
 
 
+@dataclass
+class MRTA_CFG_Model_HyperParams:
+    max_distance: float = 100.0
+    max_uav_value: float = 20.0
+    w_sat: float = 1.0
+    w_waste: float = 1.0
+    w_dist: float = 1.0
+    w_threat: float = 1.0
+
+
 class MRTA_CFG_Model:
     @staticmethod
     def eval_res_sat(t: Task, c: List[UAV], resources_num: int) -> float:
@@ -171,16 +184,16 @@ class MRTA_CFG_Model:
         return sum(eval_res_waste(req_v[i], obt_v[i]) for i in range(resources_num)) / resources_num
 
     @staticmethod
-    def eval_dist_cost(t: Task, c: List[UAV]) -> float:
+    def eval_dist_cost(t: Task, c: List[UAV], max_distance: float = 100.0) -> float:
         if c is None or len(c) == 0:
             return 0.0
-        return sum(u.position.distance_to(t.position) for u in c)
+        return sum(u.position.distance_to(t.position) for u in c) / max_distance
 
     @staticmethod
-    def eval_threat_cost(t: Task, c: List[UAV]) -> float:
+    def eval_threat_cost(t: Task, c: List[UAV], max_uav_value: float = 20.0) -> float:
         if c is None or len(c) == 0:
             return 0.0
-        return sum(u.value * t.threat for u in c)
+        return sum(u.value * t.threat for u in c) / max_uav_value
 
     @staticmethod
     def cal_task_comp_index(
@@ -201,9 +214,7 @@ class MRTA_CFG_Model:
             coalition_uav_ids = coalition_manager.get_coalition(t.id)
             coalition_uavs = [uav_manager.get(uav_id) for uav_id in coalition_uav_ids]
             # print("ee", coalition_uav_ids, coalition_uavs)
-            index += w * MRTA_CFG_Model.eval_res_sat(
-                t, coalition_uavs, hyper_params.resources_num
-            )
+            index += w * MRTA_CFG_Model.eval_res_sat(t, coalition_uavs, hyper_params.resources_num)
         return index
 
     @staticmethod
@@ -224,9 +235,7 @@ class MRTA_CFG_Model:
             w = weight_v[t_idx]
             coalition_uav_ids = coalition_manager.get_coalition(t.id)
             coalition_uavs = [uav_manager.get(uav_id) for uav_id in coalition_uav_ids]
-            index += w * MRTA_CFG_Model.eval_res_sat(
-                t, coalition_uavs, hyper_params.resources_num
-            )
+            index += w * MRTA_CFG_Model.eval_res_sat(t, coalition_uavs, hyper_params.resources_num)
         return index
 
     @staticmethod
@@ -259,6 +268,7 @@ class MRTA_CFG_Model:
         coalition_manager: CoalitionManager,
         hyper_params: HyperParams,
         weight_v: np.array = None,
+        model_hyper_params: MRTA_CFG_Model_HyperParams = None,
     ) -> float:
         if weight_v is None:
             weight_v: np.ndarray = np.ones(task_manager.size())
@@ -270,7 +280,9 @@ class MRTA_CFG_Model:
             w = weight_v[t_idx]
             coalition_uav_ids = coalition_manager.get_coalition(t.id)
             coalition_uavs = [uav_manager.get(uav_id) for uav_id in coalition_uav_ids]
-            index += w * MRTA_CFG_Model.eval_dist_cost(t, coalition_uavs)
+            index += w * MRTA_CFG_Model.eval_dist_cost(
+                t, coalition_uavs, model_hyper_params.max_distance
+            )
         return index
 
     @staticmethod
@@ -280,6 +292,7 @@ class MRTA_CFG_Model:
         coalition_manager: CoalitionManager,
         hyper_params: HyperParams,
         weight_v: np.array = None,
+        model_hyper_params: MRTA_CFG_Model_HyperParams = None,
     ) -> float:
         if weight_v is None:
             weight_v: np.ndarray = np.ones(task_manager.size())
@@ -291,7 +304,9 @@ class MRTA_CFG_Model:
             w = weight_v[t_idx]
             coalition_uav_ids = coalition_manager.get_coalition(t.id)
             coalition_uavs = [uav_manager.get(uav_id) for uav_id in coalition_uav_ids]
-            index += w * MRTA_CFG_Model.eval_threat_cost(t, coalition_uavs)
+            index += w * MRTA_CFG_Model.eval_threat_cost(
+                t, coalition_uavs, model_hyper_params.max_uav_value
+            )
         return index
 
     @staticmethod
@@ -299,23 +314,25 @@ class MRTA_CFG_Model:
         t: Task,
         c: List[UAV],
         resources_num: int,
-        w_sat=1.0,
-        w_waste=1,
-        w_dist=1,
-        w_threat=1,
+        model_hparams: MRTA_CFG_Model_HyperParams,
     ) -> float:
         if t.id == TaskManager.free_uav_task_id:
             return 0.0
-        w_sat = 100.0
-        w_waste = 1
-        w_dist = 1
-        w_threat = 1
         # 如何确定权重？？？？
         # 单位不同！！需要归一化，如何归一化？？？
+        w_sat = model_hparams.w_sat
+        w_waste = model_hparams.w_waste
+        w_dist = model_hparams.w_dist
+        w_threat = model_hparams.w_threat
         res_sat = w_sat * MRTA_CFG_Model.eval_res_sat(t, c, resources_num)
         res_waste = w_waste * MRTA_CFG_Model.eval_res_waste(t, c, resources_num)
-        dist_cost = w_dist * MRTA_CFG_Model.eval_dist_cost(t, c)
-        threat_cost = w_threat * MRTA_CFG_Model.eval_threat_cost(t, c)
+        dist_cost = w_dist * MRTA_CFG_Model.eval_dist_cost(t, c, model_hparams.max_distance)
+        threat_cost = w_threat * MRTA_CFG_Model.eval_threat_cost(
+            t, c, model_hparams.max_uav_value
+        )
+        # print(
+        #     f"res_sat: {res_sat}, res_waste: {res_waste}, dist_cost: {dist_cost}, threat_cost: {threat_cost}"
+        # )
         result = res_sat - res_waste - dist_cost - threat_cost
         return result
 
@@ -328,7 +345,7 @@ class MRTA_CFG_Model:
         weight_v: np.ndarray = None,
         # weight_v,
     ) -> float:
-        print("\ncal_cs_eval_beta:")
+        # print("\ncal_cs_eval_beta:")
         if weight_v is None:
             weight_v = np.ones(task_manager.size())
             weight_v /= weight_v.sum()
@@ -353,11 +370,11 @@ class MRTA_CFG_Model:
         coalition_manager: CoalitionManager,
         hyper_params: HyperParams,
     ) -> float:
-        print("\ncal_cs_eval:")
-        w_sat = (1.0,)
-        w_waste = (0.1,)
-        w_dist = (0.1,)
-        w_threat = (0.1,)
+        # print("\ncal_cs_eval:")
+        w_sat = 1.0
+        w_waste = 0.1
+        w_dist = 0.1
+        w_threat = 0.1
         res_sat_index_w = w_sat * MRTA_CFG_Model.cal_res_sat_index(
             uav_manager, task_manager, coalition_manager, hyper_params
         )
@@ -434,23 +451,19 @@ class MRTA_CFG_Model:
         """
         uav prefer task_q than task_p
         """
-        print(f"selfish_prefer: uav {uav.id}: from u{task_p.id} to u{task_q.id}")
+        # print(f"selfish_prefer: uav {uav.id}: from u{task_p.id} to u{task_q.id}")
         coalition_tp_uavids = coalition_manager.get_coalition(task_p.id)
         if uav.id not in coalition_tp_uavids:
             raise Exception("uav not in coalition")
         coalition_tp_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tp_uavids]
-        benefit_tp = MRTA_CFG_Model.cal_uav_benefit(
-            uav, task_p, coalition_tp_uavs, resources_num
-        )
+        benefit_tp = MRTA_CFG_Model.cal_uav_benefit(uav, task_p, coalition_tp_uavs, resources_num)
 
         coalition_tq_uavids = coalition_manager.get_coalition(task_q.id)
         coalition_tq_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tq_uavids]
         coalition_tq_uavs.append(uav)
-        benefit_tq = MRTA_CFG_Model.cal_uav_benefit(
-            uav, task_q, coalition_tq_uavs, resources_num
-        )
-        print(f"benefit_tp: {benefit_tp}")
-        print(f"benefit_tq: {benefit_tq}")
+        benefit_tq = MRTA_CFG_Model.cal_uav_benefit(uav, task_q, coalition_tq_uavs, resources_num)
+        # print(f"benefit_tp: {benefit_tp}")
+        # print(f"benefit_tq: {benefit_tq}")
         if benefit_tq > benefit_tp:
             return True
         else:
@@ -573,8 +586,10 @@ class MRTA_CFG_Model:
         task_manager: TaskManager,
         coalition_manager: CoalitionManager,
         resources_num: int,
+        model_hparams: MRTA_CFG_Model_HyperParams,
     ) -> bool:
         """
+        uav: task_p -> task_q
         uav prefer task_q than task_p
 
         because of the Efficiency property of Shapley Value, have:
@@ -583,32 +598,70 @@ class MRTA_CFG_Model:
 
         can directly compare the sum of payoff, to decide whether to divert.
         """
-        csa_payoff_dict = dict()
-        csb_payoff_dict = dict()
+        if log_level >= LogLevel.INFO:
+            print(f"cooperative_prefer_beta: uav {uav.id}: from t{task_p.id} to t{task_q.id}")
         coalition_tp_uavids = coalition_manager.get_coalition(task_p.id)
         if uav.id not in coalition_tp_uavids:
             raise Exception("uav not in coalition")
-        coalition_tp_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tp_uavids]
+        # coalition_tp_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tp_uavids]
+        coalition_tp_uavs: List[UAV] = []
+        for uav_id in coalition_tp_uavids:
+            if uav_id in uav_manager.get_ids():
+                coalition_tp_uavs.append(uav_manager.get(uav_id))
 
         coalition_tq_uavids = coalition_manager.get_coalition(task_q.id)
-        coalition_tq_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tq_uavids]
+        # coalition_tq_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tq_uavids]
+        coalition_tq_uavs: List[UAV] = []
+        for uav_id in coalition_tq_uavids:
+            if uav_id in uav_manager.get_ids():
+                coalition_tq_uavs.append(uav_manager.get(uav_id))
         # before divert
         csa_coalition_tp_eval = MRTA_CFG_Model.cal_coalition_eval(
-            task_p, coalition_tp_uavs, resources_num
+            task_p,
+            coalition_tp_uavs,
+            resources_num,
+            model_hparams=model_hparams,
         )
         csa_coalition_tq_eval = MRTA_CFG_Model.cal_coalition_eval(
-            task_q, coalition_tq_uavs, resources_num
+            task_q,
+            coalition_tq_uavs,
+            resources_num,
+            model_hparams=model_hparams,
         )
+
+        if log_level >= LogLevel.INFO:
+            print(
+                f"csa_coalition_tp_eval: {csa_coalition_tp_eval}, tp=t{task_p.id}, uavs={coalition_tp_uavids}"
+            )
+            print(
+                f"csa_coalition_tq_eval: {csa_coalition_tq_eval}, tq=t{task_q.id}, uavs={coalition_tq_uavids}"
+            )
 
         # divert
         coalition_tp_uavs.remove(uav)
         coalition_tq_uavs.append(uav)
+        coalition_tp_uavids = [u.id for u in coalition_tp_uavs]
+        coalition_tq_uavids = [u.id for u in coalition_tq_uavs]
         csb_coalition_tp_eval = MRTA_CFG_Model.cal_coalition_eval(
-            task_p, coalition_tp_uavs, resources_num
+            task_p,
+            coalition_tp_uavs,
+            resources_num,
+            model_hparams=model_hparams,
         )
         csb_coalition_tq_eval = MRTA_CFG_Model.cal_coalition_eval(
-            task_q, coalition_tq_uavs, resources_num
+            task_q,
+            coalition_tq_uavs,
+            resources_num,
+            model_hparams=model_hparams,
         )
+
+        if log_level >= LogLevel.INFO:
+            print(
+                f"csb_coalition_tp_eval: {csb_coalition_tp_eval}, tp=t{task_p.id}, uavs={coalition_tp_uavids}"
+            )
+            print(
+                f"csb_coalition_tq_eval: {csb_coalition_tq_eval}, tq=t{task_q.id}, uavs={coalition_tq_uavids}"
+            )
 
         # compare
         if (
@@ -686,9 +739,7 @@ class MRTA_CFG_Model:
         task: Task, coalition: List[UAV], resources_num: int, method: str = "exact"
     ) -> Dict:
         if method == "exact":
-            return MRTA_CFG_Model.cal_coalition_payoff_shapley_value(
-                task, coalition, resources_num
-            )
+            return MRTA_CFG_Model.cal_coalition_payoff_shapley_value(task, coalition, resources_num)
         elif method == "monte_carlo":
             return MRTA_CFG_Model.cal_coalition_payoff_shapley_monte_carlo(
                 task, coalition, resources_num, num_samples=10
@@ -756,9 +807,7 @@ def get_connected_components_uavid(uav_list: List[UAV], comm_distance: float) ->
     return components_in_uav_id
 
 
-def test():
-    # check Activations
-    # Activations.plot_all()
+def test_model_eval():
     resources_num = 5
     uav_gen = UAVGenParams(resources_num=resources_num)
     task_gen = TaskGenParams(resources_num=resources_num)
@@ -771,22 +820,36 @@ def test():
     )
     task_manager = TaskManager(task_list, resources_num)
     uav_manager = UAVManager(uav_list)
-    # print(task_manager.brief_info())
-    # print(uav_manager.brief_info())
-    task_manager.format_print()
-    uav_manager.format_print()
     t = task_list[0]
+    model_hparams = MRTA_CFG_Model_HyperParams()
     sat = MRTA_CFG_Model.eval_res_sat(t, uav_list, uav_gen.resources_num)
     is_complete = MRTA_CFG_Model.eval_is_complete(t, uav_list, uav_gen.resources_num)
     res_waste = MRTA_CFG_Model.eval_res_waste(t, uav_list, uav_gen.resources_num)
-    dist_cost = MRTA_CFG_Model.eval_dist_cost(t, uav_list)
-    threat_cost = MRTA_CFG_Model.eval_threat_cost(t, uav_list)
+    dist_cost = MRTA_CFG_Model.eval_dist_cost(t, uav_list, model_hparams.max_distance)
+    threat_cost = MRTA_CFG_Model.eval_threat_cost(t, uav_list, model_hparams.max_uav_value)
     print("sat", sat)
     print("is_complete", is_complete)
     print("res_waste", res_waste)
     print("dist_cost", dist_cost)
     print("threat_cost", threat_cost)
 
+
+def test_model_index():
+    resources_num = 5
+    uav_gen = UAVGenParams(resources_num=resources_num)
+    task_gen = TaskGenParams(resources_num=resources_num)
+
+    task_list = generate_task_list(5, task_gen)
+    uav_list = generate_uav_list(10, uav_gen)
+    hyper_params = HyperParams(
+        resources_num=resources_num,
+        map_shape=utils.calculate_map_shape_on_list(uav_list, task_list),
+    )
+    task_manager = TaskManager(task_list, resources_num)
+    uav_manager = UAVManager(uav_list)
+
+    t = task_list[0]
+    model_hparams = MRTA_CFG_Model_HyperParams()
     coalition_manager = CoalitionManager(uav_manager.get_ids(), task_manager.get_ids())
     for uav in uav_list:
         coalition_manager.assign(uav.id, t.id)
@@ -802,46 +865,41 @@ def test():
         uav_manager, task_manager, coalition_manager, hyper_params
     )
     dist_cost_index = MRTA_CFG_Model.cal_dist_cost_index(
-        uav_manager, task_manager, coalition_manager, hyper_params
+        uav_manager, task_manager, coalition_manager, hyper_params, model_hyper_params=model_hparams
     )
     threat_cost_index = MRTA_CFG_Model.cal_threat_cost_index(
-        uav_manager, task_manager, coalition_manager, hyper_params
+        uav_manager, task_manager, coalition_manager, hyper_params, model_hyper_params=model_hparams
     )
-    # print("task_comp_index", task_comp_index)
-    # print("res_sat_index", res_sat_index)
-    # print("res_waste_index", res_waste_index)
-    # print("dist_cost_index", dist_cost_index)
-    # print("threat_cost_index", threat_cost_index)
+    print("task_comp_index", task_comp_index)
+    print("res_sat_index", res_sat_index)
+    print("res_waste_index", res_waste_index)
+    print("dist_cost_index", dist_cost_index)
+    print("threat_cost_index", threat_cost_index)
 
-    eval_cs = MRTA_CFG_Model.cal_cs_eval(
-        uav_manager,
-        task_manager,
-        coalition_manager,
-        hyper_params,
+
+def test_model_prefer():
+    resources_num = 5
+    uav_gen = UAVGenParams(resources_num=resources_num)
+    task_gen = TaskGenParams(resources_num=resources_num)
+
+    task_list = generate_task_list(5, task_gen)
+    uav_list = generate_uav_list(10, uav_gen)
+    hyper_params = HyperParams(
+        resources_num=resources_num,
+        map_shape=utils.calculate_map_shape_on_list(uav_list, task_list),
     )
-    print("eval_cs", eval_cs)
+    task_manager = TaskManager(task_list, resources_num)
+    uav_manager = UAVManager(uav_list)
 
-    cs_eval_beta = MRTA_CFG_Model.cal_cs_eval_beta(
-        uav_manager,
-        task_manager,
-        coalition_manager,
-        hyper_params,
-    )
-    print("cs_eval_beta", cs_eval_beta)
+    t = task_list[0]
+    model_hparams = MRTA_CFG_Model_HyperParams()
+    coalition_manager = CoalitionManager(uav_manager.get_ids(), task_manager.get_ids())
+    for uav in uav_list:
+        coalition_manager.assign(uav.id, t.id)
 
-    payoff_dict: np.ndarray = MRTA_CFG_Model.cal_coalition_payoff(
-        t, uav_list, resources_num, method="monte_carlo"
-    )
-    payoff_sum = sum(payoff_dict.values())
-    print("payoff_vector", payoff_dict)
-    print("payoff_sum", payoff_sum)
-
-    coalition_eval = MRTA_CFG_Model.cal_coalition_eval(t, uav_list, resources_num)
-    print("coalition_eval", coalition_eval)
+    # test
     u = uav_list[0]
-    uav_benefit = MRTA_CFG_Model.cal_uav_benefit(
-        u, t, uav_list, resources_num=resources_num
-    )
+    uav_benefit = MRTA_CFG_Model.cal_uav_benefit(u, t, uav_list, resources_num=resources_num)
     # print("uav_benefit", uav_benefit)
     tp = t
     tq = task_manager.get_free_uav_task(resources_num)
@@ -851,12 +909,69 @@ def test():
     )
     print("is_selfish", is_selfish)
 
-    # is_pareto = Centralized_MRTA_Model.pareto_prefer(
-    #     u, tp, tq, uav_manager, task_manager, coalition_manager, resources_num
-    # )
-    # print("is_pareto", is_pareto)
+    is_pareto = MRTA_CFG_Model.pareto_prefer(
+        u, tp, tq, uav_manager, task_manager, coalition_manager, resources_num
+    )
+    print("is_pareto", is_pareto)
 
-    # is_cooperative = Centralized_MRTA_Model.cooperative_prefer(
-    #     u, tp, tq, uav_manager, task_manager, coalition_manager, resources_num
+    is_cooperative = MRTA_CFG_Model.cooperative_prefer(
+        u, tp, tq, uav_manager, task_manager, coalition_manager, resources_num
+    )
+    print("is_cooperative", is_cooperative)
+
+
+def test():
+    # check Activations
+    # Activations.plot_all()
+    resources_num = 5
+    uav_gen = UAVGenParams(resources_num=resources_num)
+    task_gen = TaskGenParams(resources_num=resources_num)
+
+    task_list = generate_task_list(5, task_gen)
+    uav_list = generate_uav_list(10, uav_gen)
+    hyper_params = HyperParams(
+        resources_num=resources_num,
+        map_shape=utils.calculate_map_shape_on_list(uav_list, task_list),
+    )
+    task_manager = TaskManager(task_list, resources_num)
+    uav_manager = UAVManager(uav_list)
+
+    # task_manager.format_print()
+    # uav_manager.format_print()
+
+    t = task_list[0]
+    coalition_manager = CoalitionManager(uav_manager.get_ids(), task_manager.get_ids())
+    for uav in uav_list:
+        coalition_manager.assign(uav.id, t.id)
+    # coalition_manager.format_print()
+
+    # eval_cs = MRTA_CFG_Model.cal_cs_eval(
+    #     uav_manager,
+    #     task_manager,
+    #     coalition_manager,
+    #     hyper_params,
     # )
-    # print("is_cooperative", is_cooperative)
+    # print("eval_cs", eval_cs)
+
+    # cs_eval_beta = MRTA_CFG_Model.cal_cs_eval_beta(
+    #     uav_manager,
+    #     task_manager,
+    #     coalition_manager,
+    #     hyper_params,
+    # )
+    # print("cs_eval_beta", cs_eval_beta)
+
+    # payoff_dict: np.ndarray = MRTA_CFG_Model.cal_coalition_payoff(
+    #     t, uav_list, resources_num, method="monte_carlo"
+    # )
+    # payoff_sum = sum(payoff_dict.values())
+    # print("payoff_vector", payoff_dict)
+    # print("payoff_sum", payoff_sum)
+
+    model_hparams = MRTA_CFG_Model_HyperParams()
+    coalition_eval = MRTA_CFG_Model.cal_coalition_eval(t, uav_list, resources_num, model_hparams)
+    print("coalition_eval", coalition_eval)
+
+
+if __name__ == "__main__":
+    test()

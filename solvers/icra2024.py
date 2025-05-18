@@ -110,17 +110,24 @@ class AutoUAV(UAV):
         receive msgs from its neighbors, update local coalition.
         """
         receive_changed = False
-        for msg in msgs:  # O(component.size())
-            # print(f"msg: {msg}")
-            for msg_uav_id, msg_uav_update_step in msg.uav_update_step_dict.items():  # O(n)
+        
+        # Track all changes to apply them atomically
+        changes_to_apply = []
+        
+        for msg in msgs:
+            for msg_uav_id, msg_uav_update_step in msg.uav_update_step_dict.items():
                 if msg_uav_id not in self.uav_update_step_dict:
                     self.uav_update_step_dict[msg_uav_id] = 0
                 if self.uav_update_step_dict[msg_uav_id] < msg_uav_update_step:
-                    self.coalition_manager.unassign(msg_uav_id)
-                    self.coalition_manager.assign(msg_uav_id, msg.uav2task[msg_uav_id])
-                    self.uav_update_step_dict[msg_uav_id] = msg_uav_update_step
-                    receive_changed = True
-
+                    changes_to_apply.append((msg_uav_id, msg.uav2task[msg_uav_id], msg_uav_update_step))
+        
+        # Apply changes atomically to maintain consistency
+        for uav_id, task_id, update_step in changes_to_apply:
+            self.coalition_manager.unassign(uav_id)
+            self.coalition_manager.assign(uav_id, task_id)
+            self.uav_update_step_dict[uav_id] = update_step
+            receive_changed = True
+        
         self.changed = self.changed or receive_changed
         return receive_changed
 
@@ -134,6 +141,7 @@ class AutoUAV(UAV):
         divert_changed = False
         for taskj_id in task_ids:  # m
             taski_id = self.coalition_manager.get_taskid(self.id)
+            # print(f"taski_id: {taski_id}, taskj_id: {taskj_id}")
             if taski_id == taskj_id:
                 continue
 
@@ -158,6 +166,7 @@ class AutoUAV(UAV):
                     self.uav_manager,
                     self.hyper_params,
                 )  # O(n)
+                # print(f"taski_coalition_copy: {taski_coalition_copy}")
             if taskj_id == TaskManager.free_uav_task_id:
                 uj = 0
             else:
@@ -180,6 +189,7 @@ class AutoUAV(UAV):
                     self.uav_manager,
                     self.hyper_params,
                 )
+                # print(f"taskj_coalition_copy: {taskj_coalition_copy}")
 
             if ui < uj:
                 # uav leave taski, join taskj
@@ -374,7 +384,7 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
             for component in components:
                 if len(component) == 0:
                     continue
-                leader_uav_id = component[0]
+                leader_uav_id = self.select_leader(component, self.uav_manager)
                 leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
                 msg = leader_uav.send_msg()
                 leader_messages.append(msg)
@@ -383,7 +393,7 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
             for component in components:  # components.size()
                 if len(component) == 0:
                     continue
-                leader_uav_id = component[0]
+                leader_uav_id = self.select_leader(component, self.uav_manager)
                 leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
                 leader_uav.receive_and_update(leader_messages)
 
@@ -401,9 +411,30 @@ class ICRA2024_CoalitionFormationGame(MRTASolver):
         for component in components:
             if len(component) == 0:
                 continue
-            leader_uav_id = component[0]
+            # leader_uav_id = component[0]
+            leader_uav_id = self.select_leader(component, self.uav_manager)
             leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
             self.coalition_manager.merge_coalition_manager(leader_uav.coalition_manager)
+
+    def select_leader(self, component, uav_manager):
+        if not component:
+            return None
+        
+        # Simple approach: select UAV closest to the center of the component
+        positions = [uav_manager.get(uav_id).position.xyz for uav_id in component]
+        center = np.mean(positions, axis=0)
+        
+        min_dist = float('inf')
+        leader_id = None
+        
+        for uav_id in component:
+            uav = uav_manager.get(uav_id)
+            dist = np.linalg.norm(uav.position.xyz - center)
+            if dist < min_dist:
+                min_dist = dist
+                leader_id = uav_id
+            
+        return leader_id
 
 
 class ICRA2024_CoalitionFormationGame_2(ICRA2024_CoalitionFormationGame):
@@ -471,7 +502,7 @@ class ICRA2024_CoalitionFormationGame_2(ICRA2024_CoalitionFormationGame):
             for component in components:
                 if len(component) == 0:
                     continue
-                leader_uav_id = component[0]
+                leader_uav_id = self.select_leader(component, self.uav_manager)
                 leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
                 msg = leader_uav.send_msg()
                 leader_messages.append(msg)
@@ -480,7 +511,7 @@ class ICRA2024_CoalitionFormationGame_2(ICRA2024_CoalitionFormationGame):
             for component in components:  # components.size()
                 if len(component) == 0:
                     continue
-                leader_uav_id = component[0]
+                leader_uav_id = self.select_leader(component, self.uav_manager)
                 leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
                 leader_uav.receive_and_update(leader_messages)
 
@@ -498,7 +529,7 @@ class ICRA2024_CoalitionFormationGame_2(ICRA2024_CoalitionFormationGame):
         for component in components:
             if len(component) == 0:
                 continue
-            leader_uav_id = component[0]
+            leader_uav_id = self.select_leader(component, self.uav_manager)
             leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
             self.coalition_manager.merge_coalition_manager(leader_uav.coalition_manager)
 

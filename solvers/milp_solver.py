@@ -226,5 +226,5 @@ class MILPSolverPyomo(MRTASolver):
                     assigned_uavs.append(uav.id)
             allocation[task.id] = assigned_uavs
 
-        print(allocation)
+        # print(allocation)
         self.coalition_manager.update_from_assignment(allocation, uav_manager=self.uav_manager)

@@ -15,7 +15,7 @@
 - [x] Test solver on one profile multiple times and draw the **box** fig.
 - [ ] Implement Real Muti-Process simulation in [`./solvers/icra.py`](./solvers/icra2024.py).
 - [ ] Mutiple MRAT Solver Algorithm Implment:
-  - [ ] Acution Based Methods: Consensus-Based Bundle Algorithm (CBBA) and Contract Net Protocol (CNP)
+  - [ ] Auction Based Methods: Consensus-Based Bundle Algorithm (CBBA) and Contract Net Protocol (CNP)
   - [ ] Optimization Based Methods:
     - [x] Deterministic Optimization: linear programming (LP), mixed-integer linear programming (MILP), and the Hungarian algorithm. [`milp_solver.py`](./solvers/milp_solver.py) and [`nlp_solver.py`](./solvers/nlp_solver.py)
     - [ ] Meta-heuristics: genetic algorithms (GA), simulated annealing (SA), and swarm intelligence
@@ -92,6 +92,20 @@ python ./main.py plot -f ./.results/results_uav_num_all.json -x uav_num --labels
 # test uav num
 python ./main.py test --test_case uav_num --choices centralized csci --random_test_times 5 --uav_nums 10 20 40 80 160 --task_nums 20 -o ./.results/results_uav_num_0516.yaml
 python ./main.py plot -f ./.results/results_uav_num_0516.yaml -x uav_num --labels all
+
+
+# 0518
+## uav num
+python ./main.py test --test_case uav_num --choices csci iros icra centralized distributed --random_test_times 20 --uav_nums 10 20 40 80 160 320 --task_nums 30 -o ./.results/results_uav_num_0518.yaml
+
+python ./main.py plot -f ./.results/results_uav_num_all_0518.yaml -x uav_num --labels all --choices CSCI2024_Xue IROS2024_LiwangZhang ICRA2024_LiwangZhang Centralized Distributed --save_dir ./.results/uav_num_all_0518/  --show
+
+## task num
+python ./main.py test --test_case task_num --choices csci iros icra centralized distributed --random_test_times 20 --uav_nums 40  --task_nums 10 20 40 80 160 -o ./.results/results_task_num_0518.yaml
+
+python ./main.py plot -f ./.results/results_task_num_0518.yaml -x task_num --labels all --choices CSCI2024_Xue IROS2024_LiwangZhang ICRA2024_LiwangZhang Centralized Distributed --save_dir ./.results/task_num_all_0518/  --show
+
+## example
 
 ```
 

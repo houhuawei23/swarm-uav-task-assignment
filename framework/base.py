@@ -102,7 +102,7 @@ def plot_entities_on_axes(ax: plt.Axes, entities: List[Entity], **kwargs) -> Non
     for entity in entities:
         x, y, z = entity.position.xyz
         ax.scatter(x, y, label=f"{entity.type_name()} {entity.id}", **kwargs)
-        ax.text(x, y + text_delta, s=entity.brief_info(), ha="center")
+        ax.text(x, y + text_delta, s=entity.brief_info(), ha="center", fontsize=12)
 
 
 @dataclass
@@ -149,8 +149,13 @@ class EntityManager:
     def __iter__(self):
         return iter(self.entities.values())
 
-    def plot(self, ax: plt.Axes, **kwargs) -> None:
-        plot_entities_on_axes(ax, self.entities.values(), **kwargs)
+    def plot(self, ax: plt.Axes, block_ids: List[int] = [], **kwargs) -> None:
+        if block_ids:
+            new_entities = [entity for entity in self.entities.values() if entity.id not in block_ids]
+        else:
+            new_entities = self.entities.values()
+
+        plot_entities_on_axes(ax, new_entities, **kwargs)
 
     def random_one(self) -> Entity:
         if not self.entities:
@@ -180,8 +185,8 @@ class HyperParams:
     resources_num: int = 0  # 资源维度数
     # 任务环境区域大小
     map_shape: List[int] = field(default_factory=lambda: [10, 10, 10])
-    resource_contribution_weight: float = 1.0  # 资源贡献权重
-    path_cost_weight: float = 10.0  # 路径成本权重
+    resource_contribution_weight: float = 5.0  # 资源贡献权重
+    path_cost_weight: float = 20.0  # 路径成本权重
     threat_loss_weight: float = 1.0  # 威胁权重
     zero_resource_contribution_penalty: float = -1.0  # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
     max_iter: int = 10  # 最大迭代次数

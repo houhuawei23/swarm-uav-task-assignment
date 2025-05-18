@@ -56,6 +56,7 @@ def test_solver(
 
 
 def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, show: bool = False):
+    print(f"Running on test case: {test_case_path}")
     results: List[EvalResult] = []
     with open(test_case_path, "r") as f:
         data = json.load(f)
@@ -63,7 +64,7 @@ def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, 
         resources_num=data["resources_num"],
         map_shape=utils.calculate_map_shape_on_dict_list(data["uavs"], data["tasks"]),
         resource_contribution_weight=5.0,
-        path_cost_weight=5.0,
+        path_cost_weight=15.0,
         threat_loss_weight=0.05,
         zero_resource_contribution_penalty=-1.0,
         max_iter=10,
@@ -91,8 +92,8 @@ def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, 
             coalition_mana.plot_map(
                 uav_manager, task_manager, hyper_params, output_path=None, show=True
             )
-        # env = sim.SimulationEnv(uav_manager, task_manager, coalition_mana, hyper_params)
-        # env.run(10, debug_level=0)
+        env = sim.SimulationEnv(uav_manager, task_manager, coalition_mana, hyper_params)
+        env.run(10, debug_level=0)
     return results
 
 
@@ -225,6 +226,46 @@ def read_results(
     return results
 
 
+# def visualize_results(
+#     result_list: List[SaveResult],
+#     x: str,
+#     labels=["elapsed_time"],
+#     choices: List[str] = [],
+#     save_dir: Path = None,
+#     show: bool = True,
+# ):
+#     result_fdict_list = [d.to_flattened_dict() for d in result_list]
+#     df = pd.DataFrame(result_fdict_list)
+#     for label in labels:
+#         plt.figure(figsize=(12, 8))
+#         # choices
+#         if choices:
+#             df = df[df["solver_name"].isin(choices)]
+#         sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
+#         # sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
+#         # sns.violinplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, split=True)
+
+#         plt.title(
+#             f"Boxplot of {label} by {x} and Solvers",
+#             fontdict={"fontsize": 26, "fontweight": "bold"},
+#         )
+#         plt.xlabel(f"{x}", fontdict={"fontsize": 28})
+#         plt.ylabel(f"{label}", fontdict={"fontsize": 28})
+#         plt.legend(title="Solver Name", fontsize=22, title_fontsize=18, loc="upper left")
+#         # 设置坐标轴数字大小, 加粗
+#         plt.tick_params(axis="both", labelsize=24)
+#         # tight
+#         plt.tight_layout()
+
+#         plt.grid(True)
+#         if save_dir is not None:
+#             if not save_dir.exists():
+#                 save_dir.mkdir(parents=True)
+#             plt.savefig(save_dir / f"{label}_{x}.png", dpi=600)  # high dpi
+#         if show:
+#             plt.show()
+
+
 def visualize_results(
     result_list: List[SaveResult],
     x: str,
@@ -235,34 +276,117 @@ def visualize_results(
 ):
     result_fdict_list = [d.to_flattened_dict() for d in result_list]
     df = pd.DataFrame(result_fdict_list)
-    for label in labels:
-        plt.figure(figsize=(12, 8))
-        # choices
-        if choices:
-            df = df[df["solver_name"].isin(choices)]
-        sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
-        # sns.boxplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, palette="Set3")
-        # sns.violinplot(x=x, y=f"eval_result.{label}", hue="solver_name", data=df, split=True)
 
-        plt.title(
-            f"Boxplot of {label} by {x} and Solvers",
-            fontdict={"fontsize": 26, "fontweight": "bold"},
+    for label in labels:
+        # Create figure with higher resolution
+        fig, ax = plt.subplots(figsize=(10, 8), dpi=100)
+
+        # Filter data if choices provided
+        if choices:
+            df_filtered = df[df["solver_name"].isin(choices)]
+        else:
+            df_filtered = df
+
+        # Set color palette
+        colors = sns.color_palette("husl", n_colors=len(df_filtered["solver_name"].unique()))
+
+        # Create box plot
+        sns.boxplot(
+            x=x,
+            y=f"eval_result.{label}",
+            hue="solver_name",
+            data=df_filtered,
+            palette=colors,
+            width=0.7,
+            showfliers=False,
+            ax=ax,
         )
-        plt.xlabel(f"{x}", fontdict={"fontsize": 28})
-        plt.ylabel(f"{label}", fontdict={"fontsize": 28})
-        plt.legend(title="Solver Name", fontsize=22, title_fontsize=18, loc="upper left")
-        # 设置坐标轴数字大小, 加粗
-        plt.tick_params(axis="both", labelsize=24)
-        # tight
+
+        # Add line plot connecting medians
+        solvers = df_filtered["solver_name"].unique()
+        categories = sorted(df_filtered[x].unique())
+
+        for idx, solver in enumerate(solvers):
+            solver_medians = []
+            for cat in categories:
+                median = df_filtered[
+                    (df_filtered[x] == cat) & (df_filtered["solver_name"] == solver)
+                ][f"eval_result.{label}"].median()
+                solver_medians.append(median)
+
+            # Plot lines connecting medians
+            x_positions = range(len(categories))
+            plt.plot(
+                x_positions,
+                solver_medians,
+                "-o",
+                linewidth=2.5,
+                markersize=10,
+                color=colors[idx],
+                alpha=0.8,
+                zorder=5,
+                # label=f"{solver} (trend)"
+            )
+
+        # Enhance the plot appearance
+        plt.title(
+            f"{label.replace('_', ' ').title()} Distribution",
+            fontdict={"fontsize": 24, "fontweight": "bold"},
+            pad=20,
+        )
+        plt.xlabel(
+            x.replace("_", " ").title(),
+            fontdict={"fontsize": 20, "fontweight": "bold"},
+            labelpad=15,
+        )
+        plt.ylabel(
+            label.replace("_", " ").title(),
+            fontdict={"fontsize": 20, "fontweight": "bold"},
+            labelpad=15,
+        )
+
+        # Enhance legend
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(
+            handles,
+            labels,
+            title="Solver Types",
+            title_fontsize=16,
+            fontsize=14,
+            #  bbox_to_anchor=(1.05, 1),
+            # loc="upper left",
+            borderaxespad=0.0,
+            frameon=True,
+            #  edgecolor='black'
+        )
+
+        # Customize grid and style
+        ax.set_facecolor("#f8f9fa")
+        fig.patch.set_facecolor("white")
+        plt.grid(True, linestyle="--", alpha=0.3)
+        plt.tick_params(axis="both", labelsize=16)
+
+        for spine in ax.spines.values():
+            spine.set_linewidth(1.5)
+            spine.set_color("#333333")
+
+        # Adjust layout
         plt.tight_layout()
 
-        plt.grid(True)
+        # Save and show
         if save_dir is not None:
             if not save_dir.exists():
                 save_dir.mkdir(parents=True)
-            plt.savefig(save_dir / f"{label}_{x}.png", dpi=600)  # high dpi
+            plt.savefig(
+                save_dir / f"{label}_{x}.png",
+                dpi=600,
+                bbox_inches="tight",
+                facecolor="white",
+                edgecolor="none",
+            )
         if show:
             plt.show()
+        plt.close()  # Close the figure to free memory
 
 
 class TestFramework:

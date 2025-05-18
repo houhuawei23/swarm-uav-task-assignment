@@ -5,6 +5,7 @@ from itertools import combinations
 from math import factorial
 from dataclasses import dataclass, field
 from copy import deepcopy
+from scipy.optimize import linear_sum_assignment
 
 
 from framework.base import HyperParams, LogLevel
@@ -19,9 +20,9 @@ from framework.coalition_manager import CoalitionManager
 from framework.mrta_solver import MRTASolver
 import framework.utils as utils
 
-from .utils import MRTA_CFG_Model, get_connected_components_uavid
+from .utils import MRTA_CFG_Model, get_connected_components_uavid, MRTA_CFG_Model_HyperParams
 
-log_level: LogLevel = LogLevel.DEBUG
+log_level: LogLevel = LogLevel.SILENCE
 
 
 @dataclass
@@ -93,6 +94,17 @@ class AutoUAV(UAV):
 
         # self.uav_stable_dict = {uav_id: False for uav_id in uav_manager.get_ids()}
         self.uav_update_step_dict = {uav_id: 0 for uav_id in uav_manager.get_ids()}
+        map_shape: List[float] = utils.calculate_map_shape_on_mana(uav_manager, task_manager)
+        max_distance = max(map_shape)
+        max_uav_value = max(uav.value for uav in uav_manager.get_all())
+        self.model_hparams = MRTA_CFG_Model_HyperParams(
+            max_distance=max_distance,
+            max_uav_value=max_uav_value,
+            w_sat=5.0,
+            w_waste=1,
+            w_dist=1,
+            w_threat=1,
+        )
 
     def send_msg(self) -> Message:
         """
@@ -134,10 +146,13 @@ class AutoUAV(UAV):
         """
         # pass
         task_ids = self.task_manager.get_ids().copy()
-        task_ids.append(TaskManager.free_uav_task_id)  # special, 0 means no task
+        # task_ids.append(TaskManager.free_uav_task_id)  # special, 0 means no task
+        # print(f"u{self.id}.changed: {self.changed}")
         divert_changed = False
         for taskj_id in task_ids:  # m
             taski_id = self.coalition_manager.get_taskid(self.id)
+            # print(f"u{self.id}.try_divert: taski_id: {taski_id}, taskj_id: {taskj_id}")
+            # self.coalition_manager.format_print()  # check
             if taski_id == taskj_id:
                 continue
 
@@ -146,22 +161,27 @@ class AutoUAV(UAV):
             prefer = "cooperative"
             prefer_func = MRTA_CFG_Model.get_prefer_func(prefer)
             if prefer_func(
-                self,
-                taski,
-                taskj,
-                self.uav_manager,
-                self.task_manager,
-                self.coalition_manager,
-                self.hyper_params.resources_num,
+                uav=self,
+                task_p=taski,
+                task_q=taskj,
+                uav_manager=self.uav_manager,
+                task_manager=self.task_manager,
+                coalition_manager=self.coalition_manager,
+                resources_num=self.hyper_params.resources_num,
+                model_hparams=self.model_hparams,
             ):
+                # print(f"divert changed: {self.id} leave {taski_id}, join {taskj_id}")
                 # if true, uav leave taski, join taskj
-                # self.coalition_manager.format_print()  # check
 
                 self.coalition_manager.unassign(self.id)
                 self.coalition_manager.assign(self.id, taskj_id)
                 divert_changed = True
-                break  # if uav changed task, break, next uav
+                self.uav_update_step_dict[self.id] += 1  # !!!!
+                # self.coalition_manager.format_print()  # check
+                # break  # if uav changed task, break, next uav
+        # print(f"u{self.id}.changed: {self.changed}, divert_changed: {divert_changed}")
         self.changed = self.changed or divert_changed
+        # print(f"u{self.id}.changed: {self.changed}")
         # print(f"[divert] uav: {self.id}, changed: {self.changed}")
         return divert_changed
 
@@ -176,6 +196,9 @@ class AutoUAV(UAV):
         info += f"  coalitoin: {self.coalition_manager.brief_info()}\n"
         info += f"  update_dict: {self.uav_update_step_dict}\n"
         return info
+
+
+from termcolor import colored, cprint
 
 
 class DistributedSolver(MRTASolver):
@@ -246,6 +269,17 @@ class DistributedSolver(MRTASolver):
         hyper_params: HyperParams,
     ):
         super().__init__(uav_manager, task_manager, coalition_manager, hyper_params)
+        map_shape: List[float] = utils.calculate_map_shape_on_mana(uav_manager, task_manager)
+        max_distance = max(map_shape)
+        max_uav_value = max(uav.value for uav in uav_manager.get_all())
+        self.model_hparams = MRTA_CFG_Model_HyperParams(
+            max_distance=max_distance,
+            max_uav_value=max_uav_value,
+            w_sat=15.0,
+            w_waste=1,
+            w_dist=25,
+            w_threat=1,
+        )
 
     @staticmethod
     def uav_type() -> Type:
@@ -265,13 +299,135 @@ class DistributedSolver(MRTASolver):
                 uav.init(component, self.task_manager)
         ```
         """
-
+        task_ids = self.task_manager.get_ids()
+        init_assignment: Dict[int, List[int]] = {
+            task_id: [] for task_id in task_ids
+        }  # taskid -> uavids
+        # init_assignment = {0: [3], 1: [2], 2: [1]}
+        for component in components:
+            for uav_id in component:
+                # print(f"uav_id: {uav_id}")
+                task_id = random.choice(task_ids)
+                # if task_id not in init_assignment.keys():
+                #     init_assignment[task_id] = []
+                init_assignment[task_id].append(uav_id)
+        # init_assignment = {1: [], 2: [1, 2, 3], 0: []}  #!!!
         # init auto uav
         for component in components:
             # component_uav_list = [self.uav_manager.get(uav_id) for uav_id in component]
             component_uav_manager = UAVManager(
                 [self.uav_manager.get(uav_id) for uav_id in component]
             )
+            for uav_id in component:
+                uav: AutoUAV = self.uav_manager.get(uav_id)
+                uav_coalition_manager = CoalitionManager(self.uav_manager.get_ids(), task_ids)
+                uav.init(
+                    component_uav_manager,
+                    self.task_manager,
+                    uav_coalition_manager,
+                    self.hyper_params,
+                )
+                uav_coalition_manager.update_from_assignment(init_assignment, uav.uav_manager)
+                # task_id = random.choice(task_ids)
+                # uav.coalition_manager.assign(uav_id, task_id)
+
+    def init_allocate_beta(self, components: List[List[int]], debug=False):
+        """
+        分布式初始化分配方法。
+        对每个连通分量（component）独立执行类似于集中式的最大权匹配分配策略。
+
+        每个component中：
+        1. 每一轮迭代中，给每个任务分配一个未经初始化分配的无人机
+        2. 计算所有未分配UAV加入各任务联盟的边际收益，形成收益矩阵
+        3. 使用最大权匹配算法优化当前轮次的分配
+        4. 迭代直至该component中所有UAV都被分配
+
+        Args:
+            components: List[List[int]] - UAV id的连通分量列表
+            debug: bool - 是否打印调试信息
+
+        Returns:
+            bool: 分配是否成功
+        """
+        task_ids = [
+            tid for tid in self.task_manager.get_ids() if tid != TaskManager.free_uav_task_id
+        ]
+
+        # 初始化每个component的分配结果
+        init_assignment = {task_id: [] for task_id in self.task_manager.get_ids()}
+
+        # 对每个component单独执行分配
+        for component in components:
+            # 创建该component的UAV管理器
+            component_uav_manager = UAVManager(
+                [self.uav_manager.get(uav_id) for uav_id in component]
+            )
+
+            # 初始化该component的coalition manager
+            component_coalition_manager = CoalitionManager(component, self.task_manager.get_ids())
+
+            # 获取当前component中未分配的UAV
+            unassigned_uavs = component_uav_manager.get_all()
+
+            # 当还有未分配的UAV时，继续迭代
+            while unassigned_uavs:
+                # 构建收益矩阵
+                benefit_matrix = np.zeros((len(unassigned_uavs), len(task_ids)))
+
+                # 计算每个未分配UAV对每个任务的边际收益
+                for i, uav in enumerate(unassigned_uavs):
+                    for j, task_id in enumerate(task_ids):
+                        task = self.task_manager.get(task_id)
+                        # 获取当前任务的联盟
+                        current_coalition = component_coalition_manager.get_coalition(task_id)
+                        current_coalition_uavs = [
+                            component_uav_manager.get(uid) for uid in current_coalition
+                        ]
+
+                        # 计算当前联盟的效用
+                        before = MRTA_CFG_Model.cal_coalition_eval(
+                            task,
+                            current_coalition_uavs,
+                            self.hyper_params.resources_num,
+                            model_hparams=self.model_hparams,
+                        )
+
+                        # 计算加入新UAV后的效用
+                        new_coalition_uavs = current_coalition_uavs + [uav]
+                        after = MRTA_CFG_Model.cal_coalition_eval(
+                            task,
+                            new_coalition_uavs,
+                            self.hyper_params.resources_num,
+                            model_hparams=self.model_hparams,
+                        )
+
+                        # 边际收益
+                        benefit_matrix[i, j] = after - before
+
+                # 使用匈牙利算法找到最优匹配
+                row_indices, col_indices = linear_sum_assignment(benefit_matrix, maximize=True)
+
+                # 应用分配结果
+                removed_uavs = []
+                for row_idx, col_idx in zip(row_indices, col_indices):
+                    uav = unassigned_uavs[row_idx]
+                    task_id = task_ids[col_idx]
+                    # 只分配正收益的匹配
+                    if benefit_matrix[row_idx, col_idx] > 0:
+                        component_coalition_manager.assign(uav.id, task_id)
+                        # 更新全局分配结果
+                        init_assignment[task_id].append(uav.id)
+                    else:
+                        # 如果收益为负，分配到free_uav_task
+                        component_coalition_manager.assign(uav.id, TaskManager.free_uav_task_id)
+                        init_assignment[TaskManager.free_uav_task_id].append(uav.id)
+
+                    removed_uavs.append(uav)
+
+                # 更新未分配的UAV列表
+                unassigned_uavs = [uav for uav in unassigned_uavs if uav not in removed_uavs]
+
+            # 为该component中的每个UAV初始化其局部视图
             for uav_id in component:
                 uav: AutoUAV = self.uav_manager.get(uav_id)
                 uav_coalition_manager = CoalitionManager(
@@ -283,6 +439,10 @@ class DistributedSolver(MRTASolver):
                     uav_coalition_manager,
                     self.hyper_params,
                 )
+                # 更新UAV的局部coalition manager
+                uav_coalition_manager.update_from_assignment(init_assignment, uav.uav_manager)
+
+        return True
 
     def run_allocate(self):
         """
@@ -290,28 +450,27 @@ class DistributedSolver(MRTASolver):
         中控模拟程序只需要触发每个uav的动作，模拟uav之间的通信等。
         """
         # comm_distance = self.hyper_params.comm_distance
-        comm_distance = self.hyper_params.map_shape[0] / 3
+        comm_distance = self.hyper_params.map_shape[0]
         uav_list = self.uav_manager.get_all()
         components = get_connected_components_uavid(uav_list, comm_distance)  # max: O(n + n^2)
-        # print(f"components: {components}")
+        # cprint(f"components: {components}", "green")
 
-        self.init_allocate(components)  # O(n)
+        self.init_allocate_beta(components)  # O(n)
         if log_level >= LogLevel.DEBUG:
             for uav in uav_list:
                 print(uav.debug_info())
-
         not_changed_iter_cnt = 0
         sample_rate = 1 / 3
-        rec_max_iter = int(1 / sample_rate) + 1  # 期望来看，每个uav都会被抽样到
+        rec_max_iter = int(1 / sample_rate) + 4  # 期望来看，每个uav都会被抽样到
 
         # Comlexity: max_iter x O(n^2 m)
         while True:  # sim step
-            # print(f"iter {iter_cnt}")
+            # print(f"iter {not_changed_iter_cnt}")
             if (
                 not_changed_iter_cnt > self.hyper_params.max_iter
                 or not_changed_iter_cnt > rec_max_iter
             ):
-                # print(f"reach max iter {self.hyper_params.max_iter}")
+                print(f"reach max iter {self.hyper_params.max_iter}")
                 break
 
             total_changed = False
@@ -322,11 +481,15 @@ class DistributedSolver(MRTASolver):
                 # Warning: if not random sample, may be deadlock!!! vibrate!!!
                 rec_sample_size = max(1, int(len(component) * sample_rate))
                 sampled_uavids = random.sample(component, rec_sample_size)
+                # sampled_uavids = component
                 messages: List[Message] = []
                 component_changed = False
                 # for uav_id in component:
+                # print(f"component: {component}, sampled_uavids: {sampled_uavids}")
                 for uav_id in sampled_uavids:
+                    # print(f"uav_id: {uav_id}")
                     uav: AutoUAV = self.uav_manager.get(uav_id)
+                    # print(uav.debug_info())
                     uav.changed = False
                     uav.try_divert()  # random, O(n m)
                     msg = uav.send_msg()
@@ -363,6 +526,15 @@ class DistributedSolver(MRTASolver):
             leaders_changed = any(msg.changed for msg in leader_messages)
             total_changed = total_changed or leaders_changed
 
+            if log_level >= LogLevel.INFO:
+                print(f"iter {not_changed_iter_cnt} end")
+                # self.coalition_manager.format_print()  # check
+                for component in components:
+                    for uav_id in component:
+                        uav: AutoUAV = self.uav_manager.get(uav_id)
+                        print(uav.debug_info())
+                print("--------------------------------")
+
             # print(f"total_changed: {total_changed}")
             if not total_changed:
                 if log_level >= LogLevel.INFO:
@@ -377,3 +549,7 @@ class DistributedSolver(MRTASolver):
             leader_uav_id = component[0]
             leader_uav: AutoUAV = self.uav_manager.get(leader_uav_id)
             self.coalition_manager.merge_coalition_manager(leader_uav.coalition_manager)
+
+        if log_level >= LogLevel.INFO:
+            print("final coalition:")
+            self.coalition_manager.format_print()  # check

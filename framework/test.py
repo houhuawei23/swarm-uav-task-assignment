@@ -63,11 +63,12 @@ def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, 
     hyper_params = HyperParams(
         resources_num=data["resources_num"],
         map_shape=utils.calculate_map_shape_on_dict_list(data["uavs"], data["tasks"]),
-        resource_contribution_weight=5.0,
-        path_cost_weight=15.0,
-        threat_loss_weight=0.05,
-        zero_resource_contribution_penalty=-1.0,
-        max_iter=10,
+        # resource_contribution_weight=10.0,
+        # path_cost_weight=1.0,
+        # threat_loss_weight=1.0,
+        # zero_resource_contribution_penalty=-1.0,
+        # resource_waste_weight=1.0,
+        # max_iter=10,
     )
     for solver_type in solver_types:
         print(f"Running {solver_type.type_name()}...")
@@ -92,8 +93,8 @@ def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, 
             coalition_mana.plot_map(
                 uav_manager, task_manager, hyper_params, output_path=None, show=True
             )
-        env = sim.SimulationEnv(uav_manager, task_manager, coalition_mana, hyper_params)
-        env.run(10, debug_level=0)
+        # env = sim.SimulationEnv(uav_manager, task_manager, coalition_mana, hyper_params)
+        # env.run(10, debug_level=0)
     return results
 
 
@@ -288,8 +289,9 @@ def visualize_results(
             df_filtered = df
 
         # Set color palette
-        colors = sns.color_palette("husl", n_colors=len(df_filtered["solver_name"].unique()))
-
+        # colors = sns.color_palette("husl", n_colors=len(df_filtered["solver_name"].unique()))
+        # colors = sns.color_palette("pastel")
+        colors = sns.color_palette()
         # Create box plot
         sns.boxplot(
             x=x,
@@ -379,7 +381,7 @@ def visualize_results(
                 save_dir.mkdir(parents=True)
             plt.savefig(
                 save_dir / f"{label}_{x}.png",
-                dpi=600,
+                dpi=300,
                 bbox_inches="tight",
                 facecolor="white",
                 edgecolor="none",
@@ -463,7 +465,7 @@ class TestHyperParams(TestFramework):
     @staticmethod
     def run_vary_hyper_params(
         hp_choice: str,
-        values: List,
+        values: List[float],
         solver_types: List[Type[MRTASolver]],
         task_num: int = 10,
         uav_num: int = 50,

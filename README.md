@@ -54,7 +54,7 @@ $ python ./main.py --test_case uav_num --choices all --random_test_times 25 --ua
 $ python ./main.py --test_case task_num --choices iros csci --random_test_times 25 --task_nums 10 20 50 80 100
 
 # vary hyper params
-$ python ./main.py --test_case hyper_params.path_cost_weight --choices csci --random_test_times 10 --hp_values 1.0 2.0 4.0 8.0 16.0 50.0
+$ python ./main.py --test_case hyper_params.path_cost_weight --choices csci --random_test_times 20 --hp_values 1.0 2.0 4.0 8.0 16.0 50.0
 
 # test case4.json
 python ./main.py test --test_case ./test_cases/case4.json --choices csci
@@ -69,21 +69,21 @@ python ./main.py plot -f ./.results/results_task_num_all_0329.yaml -x task_num -
 
 # test hyper params
 ## 资源贡献权重
-python ./main.py test --test_case hyper_params.resource_contribution_weight --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 -o ./.results/results_hyper_params.resource_contribution_weight_all_0329.yaml
+python ./main.py test --test_case hyper_params.resource_contribution_weight --choices all --random_test_times 20 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 -o ./.results/results_hyper_params.resource_contribution_weight_all_0329.yaml
 python ./main.py plot -f ./.results/results_hyper_params.resource_contribution_weight_all_0329.yaml -x hyper_params.resource_contribution_weight --labels all --show --save_dir ./.results/results_hyper_params.resource_contribution_weight_all_0329
 
 ## 路径成本权重
-python ./main.py test --test_case hyper_params.path_cost_weight --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 1.0 2.0 4.0 8.0 16.0 -o ./.results/results_hyper_params.path_cost_weight_all_0329.yaml
-python ./main.py plot -f ./.results/results_hyper_params.path_cost_weight_all_0329.yaml -x hyper_params.path_cost_weight --labels all 
+python ./main.py test --test_case hyper_params.path_cost_weight --choices all --random_test_times 20 --hp_values -10.0 -1.0 0.0 1.0 2.0 4.0 8.0 16.0 -o ./.results/results_hyper_params.path_cost_weight_all_0329.yaml
+python ./main.py plot -f ./.results/results_hyper_params.path_cost_weight_all_0329.yaml -x hyper_params.path_cost_weight --labels all
 
 ## 威胁权重
-python ./main.py test --test_case hyper_params.threat_loss_weight --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 -o ./.results/results_hyper_params_threat_loss_weight_all_0329.yaml
+python ./main.py test --test_case hyper_params.threat_loss_weight --choices all --random_test_times 20 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 -o ./.results/results_hyper_params_threat_loss_weight_all_0329.yaml
 python ./main.py plot -f ./.results/results_hyper_params_threat_loss_weight_all_0329.yaml -x hyper_params.threat_loss_weight --labels all
 
 python ./main.py test --test_case uav_num --choices all --random_test_times 25 --uav_nums 10 20 50 80 100 --task_nums 10
 
 ## 最大迭代次数
-python ./main.py test --test_case hyper_params.max_iter --choices all --random_test_times 10 --hp_values 1 2 3 4 10 15 -o ./.results/results_hyper_params_max_iter_all_0329.yaml
+python ./main.py test --test_case hyper_params.max_iter --choices all --random_test_times 20 --hp_values 1 2 3 4 10 15 -o ./.results/results_hyper_params_max_iter_all_0329.yaml
 python ./main.py plot -f ./.results/results_hyper_params_max_iter_all_0329.yaml -x hyper_params.max_iter --labels all
 
 
@@ -105,10 +105,50 @@ python ./main.py test --test_case task_num --choices csci iros icra centralized 
 
 python ./main.py plot -f ./.results/results_task_num_0518.yaml -x task_num --labels all --choices CSCI2024_Xue IROS2024_LiwangZhang ICRA2024_LiwangZhang Centralized Distributed --save_dir ./.results/task_num_all_0518/  --show
 
-## example
+## hyper params
+### resource contribution weight
+python ./main.py test --test_case hyper_params.resource_contribution_weight --choices all --random_test_times 20 --hp_values -64.0 -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 64.0 -o ./.results/results_hyper_params.resource_contribution_weight_all_0519.yaml
 
+python ./main.py plot -f ./.results/results_hyper_params.resource_contribution_weight_all_0519.yaml -x hyper_params.resource_contribution_weight --labels all --choices CSCI2024_Xue IROS2024_LiwangZhang ICRA2024_LiwangZhang Centralized Distributed  --show --save_dir ./.results/results_hyper_params.resource_contribution_weight_all_0519
+
+### path cost weight
+python ./main.py test --test_case hyper_params.path_cost_weight --choices all --random_test_times 20 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 64.0 -o ./.results/results_hyper_params.path_cost_weight_all_0519.yaml
+
+python ./main.py plot -f ./.results/results_hyper_params.path_cost_weight_all_0519.yaml -x hyper_params.path_cost_weight --labels all --show --save_dir ./.results/results_hyper_params.path_cost_weight_all_0519
+
+### threat loss weight
+python ./main.py test --test_case hyper_params.threat_loss_weight --choices all --random_test_times 20 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 64.0 -o ./.results/results_hyper_params.threat_loss_weight_all_0519.yaml
+
+python ./main.py plot -f ./.results/results_hyper_params.threat_loss_weight_all_0519.yaml -x hyper_params.threat_loss_weight --labels all --show --save_dir ./.results/results_hyper_params.threat_loss_weight_all_0519
+
+### resource waste weight
+python ./main.py test --test_case hyper_params.resource_waste_weight --choices centralized distributed --random_test_times 20 --hp_values -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 64.0 -o ./.results/results_hyper_params.resource_waste_weight_all_0519.yaml
+
+python ./main.py plot -f ./.results/results_hyper_params.resource_waste_weight_all_0519.yaml -x hyper_params.resource_waste_weight --labels all --show --save_dir ./.results/results_hyper_params.resource_waste_weight_all_0519
+
+## example [TODO]
+
+## Ablation Study
+### uav num
+python ./main.py test --test_case uav_num --choices centralized distributed centralized_random_init distributed_random_init --random_test_times 20 --uav_nums 10 20 40 80 160 320 --task_nums 30 -o ./.results/results_uav_num_ablation_0519.yaml
+
+python ./main.py plot -f ./.results/results_uav_num_ablation_0519.yaml -x uav_num --labels all --save_dir ./.results/uav_num_all_ablation_0519/  --show
+
+### task num
+python ./main.py test --test_case task_num --choices centralized distributed centralized_random_init distributed_random_init --random_test_times 20 --uav_nums 40  --task_nums 10 20 40 80 160 -o ./.results/results_task_num_ablation_0519.yaml
+
+python ./main.py plot -f ./.results/results_task_num_ablation_0519.yaml -x task_num --labels all --save_dir ./.results/task_num_all_ablation_0519/  --show
+
+### preference
+python ./main.py test --test_case uav_num --choices centralized centralized_selfish centralized_pareto distributed distributed_selfish distributed_pareto --random_test_times 20 --uav_nums 10 20 40 80 --task_nums 30 -o ./.results/results_uav_num_preference_0519.yaml
+
+python ./main.py plot -f ./.results/results_uav_num_preference_0519.yaml -x uav_num --labels all  --save_dir ./.results/uav_num_all_preference_0519/ 
+--show
+
+## hyper params
+### resource contribution weight
+python ./main.py test --test_case uav_num --choices  centralized_selfish centralized_pareto  distributed_selfish distributed_pareto --random_test_times 1 --uav_nums 80  --task_nums 30
 ```
-
 
 ```py
 all_labels = [

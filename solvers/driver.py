@@ -51,10 +51,23 @@ def get_SolverType(choice: str) -> Type[MRTASolver]:
         return nlp_solver.NLPSolverPyomo
     elif choice == "centralized":
         return centralized_solver.CentralizedSolver
+    elif choice == "centralized_random_init":
+        return centralized_solver.CentralizedSolver_RandomInit
+    elif choice == "centralized_selfish":
+        return centralized_solver.CentralizedSolver_Selfish
+    elif choice == "centralized_pareto":
+        return centralized_solver.CentralizedSolver_Pareto
     elif choice == "distributed":
         return distributed_solver.DistributedSolver
+    elif choice == "distributed_random_init":
+        return distributed_solver.DistributedSolver_RandomInit
+    elif choice == "distributed_selfish":
+        return distributed_solver.DistributedSolver_Selfish
+    elif choice == "distributed_pareto":
+        return distributed_solver.DistributedSolver_Pareto
     else:
         raise ValueError("Invalid choice")
+
 
 choices_short2long = {
     "csci": "CSCI2024_Xue",
@@ -63,11 +76,13 @@ choices_short2long = {
     "milp": "MILP",
     "nlp_pyomo": "MINLP_Pyomo",
     "centralized": "Centralized",
-    "distributed": "Distributed"
+    "distributed": "Distributed",
 }
 
+
 def get_SolverTypes(choice_list: List[str]) -> List[Type[MRTASolver]]:
-    all_choices = ["csci", "iros", "icra", "milp", "nlp_pyomo", "centralized", "distributed"]
+    # all_choices = ["csci", "iros", "icra", "milp", "nlp_pyomo", "centralized", "distributed"]
+    all_choices = ["csci", "iros", "icra", "centralized", "distributed"]
     if len(choice_list) == 1 and choice_list[0] == "all":
         return [get_SolverType(choice) for choice in all_choices]
     else:

@@ -327,9 +327,7 @@ class MRTA_CFG_Model:
         res_sat = w_sat * MRTA_CFG_Model.eval_res_sat(t, c, resources_num)
         res_waste = w_waste * MRTA_CFG_Model.eval_res_waste(t, c, resources_num)
         dist_cost = w_dist * MRTA_CFG_Model.eval_dist_cost(t, c, model_hparams.max_distance)
-        threat_cost = w_threat * MRTA_CFG_Model.eval_threat_cost(
-            t, c, model_hparams.max_uav_value
-        )
+        threat_cost = w_threat * MRTA_CFG_Model.eval_threat_cost(t, c, model_hparams.max_uav_value)
         # print(
         #     f"res_sat: {res_sat}, res_waste: {res_waste}, dist_cost: {dist_cost}, threat_cost: {threat_cost}"
         # )
@@ -396,7 +394,10 @@ class MRTA_CFG_Model:
 
     @staticmethod
     def cal_coalition_payoff_shapley_value(
-        task: Task, coalition: List[UAV], resources_num: int
+        task: Task,
+        coalition: List[UAV],
+        resources_num: int,
+        model_hparams: MRTA_CFG_Model_HyperParams = MRTA_CFG_Model_HyperParams(),
     ) -> Dict:
         """
         cal coalition payoff dict, using Shapley Value.
@@ -407,7 +408,9 @@ class MRTA_CFG_Model:
         phi = np.zeros(coalition_size)
 
         def v(S: List[UAV]) -> float:
-            return MRTA_CFG_Model.cal_coalition_eval(task, S, resources_num)
+            return MRTA_CFG_Model.cal_coalition_eval(
+                task, S, resources_num, model_hparams=model_hparams
+            )
 
         # 计算每个玩家的 Shapley 值
         for i in range(coalition_size):
@@ -432,9 +435,11 @@ class MRTA_CFG_Model:
         task: Task,
         coalition: List[UAV],
         resources_num: int,
+        model_hparams: MRTA_CFG_Model_HyperParams,
+        method: str = "monte_carlo",
     ) -> float:
         return MRTA_CFG_Model.cal_coalition_payoff(
-            task, coalition, resources_num, method="monte_carlo"
+            task, coalition, resources_num, method=method, model_hparams=model_hparams
         )[uav.id]
 
     # Preference
@@ -447,6 +452,7 @@ class MRTA_CFG_Model:
         task_manager: TaskManager,
         coalition_manager: CoalitionManager,
         resources_num: int,
+        model_hparams: MRTA_CFG_Model_HyperParams,
     ) -> bool:
         """
         uav prefer task_q than task_p
@@ -456,12 +462,26 @@ class MRTA_CFG_Model:
         if uav.id not in coalition_tp_uavids:
             raise Exception("uav not in coalition")
         coalition_tp_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tp_uavids]
-        benefit_tp = MRTA_CFG_Model.cal_uav_benefit(uav, task_p, coalition_tp_uavs, resources_num)
+        benefit_tp = MRTA_CFG_Model.cal_uav_benefit(
+            uav,
+            task_p,
+            coalition_tp_uavs,
+            resources_num,
+            model_hparams=model_hparams,
+            method="monte_carlo",
+        )
 
         coalition_tq_uavids = coalition_manager.get_coalition(task_q.id)
         coalition_tq_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tq_uavids]
         coalition_tq_uavs.append(uav)
-        benefit_tq = MRTA_CFG_Model.cal_uav_benefit(uav, task_q, coalition_tq_uavs, resources_num)
+        benefit_tq = MRTA_CFG_Model.cal_uav_benefit(
+            uav,
+            task_q,
+            coalition_tq_uavs,
+            resources_num,
+            model_hparams=model_hparams,
+            method="monte_carlo",
+        )
         # print(f"benefit_tp: {benefit_tp}")
         # print(f"benefit_tq: {benefit_tq}")
         if benefit_tq > benefit_tp:
@@ -478,10 +498,12 @@ class MRTA_CFG_Model:
         task_manager: TaskManager,
         coalition_manager: CoalitionManager,
         resources_num: int,
+        model_hparams: MRTA_CFG_Model_HyperParams,
     ) -> bool:
         """
         uav prefer task_q than task_p
         """
+        # print(f"pareto_prefer: uav {uav.id}: from t{task_p.id} to t{task_q.id}")
         csa_payoff_dict = dict()
         csb_payoff_dict = dict()
         coalition_tp_uavids = coalition_manager.get_coalition(task_p.id)
@@ -489,14 +511,22 @@ class MRTA_CFG_Model:
             raise Exception("uav not in coalition")
         coalition_tp_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tp_uavids]
         csa_coalition_tp_payoff = MRTA_CFG_Model.cal_coalition_payoff(
-            task_p, coalition_tp_uavs, resources_num
+            task_p,
+            coalition_tp_uavs,
+            resources_num,
+            method="monte_carlo",
+            model_hparams=model_hparams,
         )
         csa_payoff_dict.update(csa_coalition_tp_payoff)
 
         coalition_tq_uavids = coalition_manager.get_coalition(task_q.id)
         coalition_tq_uavs = [uav_manager.get(uav_id) for uav_id in coalition_tq_uavids]
         csa_coalition_tq_payoff = MRTA_CFG_Model.cal_coalition_payoff(
-            task_q, coalition_tq_uavs, resources_num
+            task_q,
+            coalition_tq_uavs,
+            resources_num,
+            method="monte_carlo",
+            model_hparams=model_hparams,
         )
         csa_payoff_dict.update(csa_coalition_tq_payoff)
 
@@ -506,11 +536,19 @@ class MRTA_CFG_Model:
         coalition_tp_uavs.remove(uav)
         coalition_tq_uavs.append(uav)
         csb_coalition_tp_payoff = MRTA_CFG_Model.cal_coalition_payoff(
-            task_p, coalition_tp_uavs, resources_num
+            task_p,
+            coalition_tp_uavs,
+            resources_num,
+            method="monte_carlo",
+            model_hparams=model_hparams,
         )
         csb_payoff_dict.update(csb_coalition_tp_payoff)
         csb_coalition_tq_payoff = MRTA_CFG_Model.cal_coalition_payoff(
-            task_q, coalition_tq_uavs, resources_num
+            task_q,
+            coalition_tq_uavs,
+            resources_num,
+            method="monte_carlo",
+            model_hparams=model_hparams,
         )
         csb_payoff_dict.update(csb_coalition_tq_payoff)
         # print(f"csa_payoff_dict: {csa_payoff_dict}")
@@ -532,6 +570,7 @@ class MRTA_CFG_Model:
         task_manager: TaskManager,
         coalition_manager: CoalitionManager,
         resources_num: int,
+        model_hparams: MRTA_CFG_Model_HyperParams,
     ) -> bool:
         """
         uav prefer task_q than task_p
@@ -684,7 +723,11 @@ class MRTA_CFG_Model:
 
     @staticmethod
     def cal_coalition_payoff_shapley_monte_carlo(
-        task: Task, coalition: List[UAV], resources_num: int, num_samples: int = 100
+        task: Task,
+        coalition: List[UAV],
+        resources_num: int,
+        num_samples: int = 100,
+        model_hparams: MRTA_CFG_Model_HyperParams = MRTA_CFG_Model_HyperParams(),
     ) -> Dict:
         """
         Calculate coalition payoff using Monte Carlo sampling approximation of Shapley values.
@@ -707,7 +750,9 @@ class MRTA_CFG_Model:
         phi = np.zeros(coalition_size)
 
         def v(S: List[UAV]) -> float:
-            return MRTA_CFG_Model.cal_coalition_eval(task, S, resources_num)
+            return MRTA_CFG_Model.cal_coalition_eval(
+                task, S, resources_num, model_hparams=model_hparams
+            )
 
         # Monte Carlo sampling
         for _ in range(num_samples):
@@ -736,13 +781,19 @@ class MRTA_CFG_Model:
 
     @staticmethod
     def cal_coalition_payoff(
-        task: Task, coalition: List[UAV], resources_num: int, method: str = "exact"
+        task: Task,
+        coalition: List[UAV],
+        resources_num: int,
+        method: str = "exact",
+        model_hparams: MRTA_CFG_Model_HyperParams = MRTA_CFG_Model_HyperParams(),
     ) -> Dict:
         if method == "exact":
-            return MRTA_CFG_Model.cal_coalition_payoff_shapley_value(task, coalition, resources_num)
+            return MRTA_CFG_Model.cal_coalition_payoff_shapley_value(
+                task, coalition, resources_num, model_hparams=model_hparams
+            )
         elif method == "monte_carlo":
             return MRTA_CFG_Model.cal_coalition_payoff_shapley_monte_carlo(
-                task, coalition, resources_num, num_samples=10
+                task, coalition, resources_num, num_samples=50, model_hparams=model_hparams
             )
         else:
             raise ValueError(f"Invalid method: {method}")

@@ -97,13 +97,25 @@ class AutoUAV(UAV):
         map_shape: List[float] = utils.calculate_map_shape_on_mana(uav_manager, task_manager)
         max_distance = max(map_shape)
         max_uav_value = max(uav.value for uav in uav_manager.get_all())
+        # self.model_hparams = MRTA_CFG_Model_HyperParams(
+        #     max_distance=max_distance,
+        #     max_uav_value=max_uav_value,
+        #     w_sat=5.0,
+        #     w_waste=1,
+        #     w_dist=1,
+        #     w_threat=1,
+        # )
         self.model_hparams = MRTA_CFG_Model_HyperParams(
             max_distance=max_distance,
             max_uav_value=max_uav_value,
-            w_sat=5.0,
-            w_waste=1,
-            w_dist=1,
-            w_threat=1,
+            # w_sat=10.0,
+            # w_waste=1,
+            # w_dist=1,
+            # w_threat=1,
+            w_sat=hyper_params.resource_contribution_weight,
+            w_waste=hyper_params.resource_waste_weight,
+            w_dist=hyper_params.path_cost_weight,
+            w_threat=hyper_params.threat_loss_weight,
         )
 
     def send_msg(self) -> Message:
@@ -140,7 +152,7 @@ class AutoUAV(UAV):
         self.changed = self.changed or receive_changed
         return receive_changed
 
-    def try_divert(self) -> bool:
+    def try_divert(self, prefer: str = "cooperative") -> bool:
         """
         Complexity: O(n m)
         """
@@ -158,7 +170,7 @@ class AutoUAV(UAV):
 
             taski = self.task_manager.get(taski_id)
             taskj = self.task_manager.get(taskj_id)
-            prefer = "cooperative"
+
             prefer_func = MRTA_CFG_Model.get_prefer_func(prefer)
             if prefer_func(
                 uav=self,
@@ -445,6 +457,9 @@ class DistributedSolver(MRTASolver):
         return True
 
     def run_allocate(self):
+        self._run_allocate(init_method="beta", prefer="cooperative")
+
+    def _run_allocate(self, init_method: str = "beta", prefer: str = "cooperative"):
         """
         每个uav是独立的个体，自己运行一套算法。
         中控模拟程序只需要触发每个uav的动作，模拟uav之间的通信等。
@@ -455,24 +470,37 @@ class DistributedSolver(MRTASolver):
         components = get_connected_components_uavid(uav_list, comm_distance)  # max: O(n + n^2)
         # cprint(f"components: {components}", "green")
 
-        self.init_allocate_beta(components)  # O(n)
+        if init_method == "beta":
+            self.init_allocate_beta(components)  # O(n)
+        elif init_method == "random":
+            self.init_allocate(components)  # O(n)
+
         if log_level >= LogLevel.DEBUG:
             for uav in uav_list:
                 print(uav.debug_info())
+        max_not_cahnged_iter = 5
         not_changed_iter_cnt = 0
+        iter = 0
+
         sample_rate = 1 / 3
-        rec_max_iter = int(1 / sample_rate) + 4  # 期望来看，每个uav都会被抽样到
+        rec_max_not_changed_iter = int(1 / sample_rate) + 10  # 期望来看，每个uav都会被抽样到
 
         # Comlexity: max_iter x O(n^2 m)
         while True:  # sim step
-            # print(f"iter {not_changed_iter_cnt}")
-            if (
-                not_changed_iter_cnt > self.hyper_params.max_iter
-                or not_changed_iter_cnt > rec_max_iter
-            ):
-                print(f"reach max iter {self.hyper_params.max_iter}")
+            iter += 1
+            # print(f"iter {iter}")
+            if not_changed_iter_cnt > max_not_cahnged_iter:
+                if log_level >= LogLevel.INFO:
+                    print(f"reach max_not_cahnged_iter {max_not_cahnged_iter}")
                 break
-
+            if not_changed_iter_cnt > rec_max_not_changed_iter:
+                if log_level >= LogLevel.INFO:
+                    print(f"reach rec_max_not_changed_iter {rec_max_not_changed_iter}")
+                break
+            if iter > self.hyper_params.max_iter:
+                if log_level >= LogLevel.INFO:
+                    print(f"reach max iter {self.hyper_params.max_iter}")
+                break
             total_changed = False
             # Complexity:
             # n x sample_rate x O(n m) + O(n x component.size() x n)
@@ -491,7 +519,7 @@ class DistributedSolver(MRTASolver):
                     uav: AutoUAV = self.uav_manager.get(uav_id)
                     # print(uav.debug_info())
                     uav.changed = False
-                    uav.try_divert()  # random, O(n m)
+                    uav.try_divert(prefer=prefer)  # random, O(n m)
                     msg = uav.send_msg()
                     messages.append(msg)
                     if log_level >= LogLevel.DEBUG:
@@ -553,3 +581,30 @@ class DistributedSolver(MRTASolver):
         if log_level >= LogLevel.INFO:
             print("final coalition:")
             self.coalition_manager.format_print()  # check
+
+
+class DistributedSolver_Selfish(DistributedSolver):
+    @classmethod
+    def type_name(cls):
+        return "Distributed_Selfish"
+
+    def run_allocate(self):
+        self._run_allocate(init_method="beta", prefer="selfish")
+
+
+class DistributedSolver_Pareto(DistributedSolver):
+    @classmethod
+    def type_name(cls):
+        return "Distributed_Pareto"
+
+    def run_allocate(self):
+        self._run_allocate(init_method="beta", prefer="pareto")
+
+
+class DistributedSolver_RandomInit(DistributedSolver):
+    @classmethod
+    def type_name(cls):
+        return "Distributed_RandomInit"
+
+    def run_allocate(self):
+        self._run_allocate(init_method="random")

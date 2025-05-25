@@ -456,6 +456,7 @@ class CoalitionManager:
         
         # Save with high quality
         if output_path:
+            # print(f"Saving image results to {output_path}!!")
             plt.savefig(output_path, dpi=300, bbox_inches='tight')
 
         if show:

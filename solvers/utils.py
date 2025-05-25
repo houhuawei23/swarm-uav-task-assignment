@@ -712,6 +712,118 @@ class MRTA_CFG_Model:
             return False
 
     @staticmethod
+    def cooperative_exchange_prefer(
+        uavi: UAV,
+        uavj: UAV,
+        uav_manager: UAVManager,
+        task_manager: TaskManager,
+        coalition_manager: CoalitionManager,
+        resources_num: int,
+        model_hparams: MRTA_CFG_Model_HyperParams,
+    ) -> bool:
+        """
+        uavi and uavj exchange their task
+
+        Args:
+            uavi: First UAV to exchange
+            uavj: Second UAV to exchange
+            uav_manager: Manager containing all UAVs
+            task_manager: Manager containing all tasks
+            coalition_manager: Manager tracking task assignments
+            resources_num: Number of resource types
+            model_hparams: Hyperparameters for the model
+
+        Returns:
+            bool: True if the exchange would be beneficial for the overall system
+        """
+        if log_level >= LogLevel.INFO:
+            print(f"cooperative_exchange_prefer: uav {uavi.id} and uav {uavj.id} exchange tasks")
+
+        # Get tasks for both UAVs
+        task_i_id = coalition_manager.get_taskid(uavi.id)
+        task_j_id = coalition_manager.get_taskid(uavj.id)
+        
+        if task_i_id is None or task_j_id is None:
+            raise Exception("One or both UAVs are not assigned to any task")
+            
+        task_i = task_manager.get(task_i_id)
+        task_j = task_manager.get(task_j_id)
+
+        # Get coalitions for both tasks
+        coalition_i_uavids = coalition_manager.get_coalition_by_uav_id(uavi.id)
+        coalition_j_uavids = coalition_manager.get_coalition_by_uav_id(uavj.id)
+
+        # Get UAV objects for both coalitions
+        coalition_i_uavs: List[UAV] = []
+        for uav_id in coalition_i_uavids:
+            if uav_id in uav_manager.get_ids():
+                coalition_i_uavs.append(uav_manager.get(uav_id))
+
+        coalition_j_uavs: List[UAV] = []
+        for uav_id in coalition_j_uavids:
+            if uav_id in uav_manager.get_ids():
+                coalition_j_uavs.append(uav_manager.get(uav_id))
+
+        # Calculate coalition evaluations before exchange
+        csa_coalition_i_eval = MRTA_CFG_Model.cal_coalition_eval(
+            task_i,
+            coalition_i_uavs,
+            resources_num,
+            model_hparams=model_hparams,
+        )
+        csa_coalition_j_eval = MRTA_CFG_Model.cal_coalition_eval(
+            task_j,
+            coalition_j_uavs,
+            resources_num,
+            model_hparams=model_hparams,
+        )
+
+        if log_level >= LogLevel.INFO:
+            print(
+                f"csa_coalition_i_eval: {csa_coalition_i_eval}, ti=t{task_i.id}, uavs={coalition_i_uavids}"
+            )
+            print(
+                f"csa_coalition_j_eval: {csa_coalition_j_eval}, tj=t{task_j.id}, uavs={coalition_j_uavids}"
+            )
+
+        # Perform exchange
+        coalition_i_uavs.remove(uavi)
+        coalition_j_uavs.remove(uavj)
+        coalition_i_uavs.append(uavj)
+        coalition_j_uavs.append(uavi)
+
+        # Calculate coalition evaluations after exchange
+        csb_coalition_i_eval = MRTA_CFG_Model.cal_coalition_eval(
+            task_i,
+            coalition_i_uavs,
+            resources_num,
+            model_hparams=model_hparams,
+        )
+        csb_coalition_j_eval = MRTA_CFG_Model.cal_coalition_eval(
+            task_j,
+            coalition_j_uavs,
+            resources_num,
+            model_hparams=model_hparams,
+        )
+
+        if log_level >= LogLevel.INFO:
+            print(
+                f"csb_coalition_i_eval: {csb_coalition_i_eval}, ti=t{task_i.id}, uavs={[u.id for u in coalition_i_uavs]}"
+            )
+            print(
+                f"csb_coalition_j_eval: {csb_coalition_j_eval}, tj=t{task_j.id}, uavs={[u.id for u in coalition_j_uavs]}"
+            )
+
+        # Compare total coalition values
+        if (
+            csb_coalition_i_eval + csb_coalition_j_eval
+            > csa_coalition_i_eval + csa_coalition_j_eval
+        ):
+            return True
+        else:
+            return False
+
+    @staticmethod
     def get_prefer_func(prefer: str = "cooperative") -> callable:
         if prefer == "selfish":
             return MRTA_CFG_Model.selfish_prefer

@@ -150,7 +150,7 @@ class CentralizedSolver(MRTASolver):
         # random sample allocate
         task_ids = self.task_manager.get_ids().copy()
 
-        # change traverse
+        # traverse: try to divert
         for uav in uav_list:
             # print(f"uav {uav.id}")
             for taskj_id in task_ids:  # try to divert to another task (not have None task)
@@ -178,6 +178,9 @@ class CentralizedSolver(MRTASolver):
                     self.coalition_manager.assign(uav.id, taskj_id)
                     changed = True
                     break  # if uav changed task, break, next uav
+
+        # traverse: try to exchange, between uavi and uavj
+        # TODO:
 
         return changed
 

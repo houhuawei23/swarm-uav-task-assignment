@@ -23,6 +23,8 @@ class TestCmdArgs(CmdArgs):
     random_test_times: int
     hp_values: List
     show: bool
+    save_dir: Path
+    sim: bool
 
 
 @dataclass
@@ -63,6 +65,9 @@ def init_cmd_args():
         "-o", "--output", type=Path, default=None, help="path to the output file"
     )
     parser_test.add_argument("--show", action="store_true", help="show the plot")
+    parser_test.add_argument("--save_dir", type=Path, default=None, help="path to the output file")
+    parser_test.add_argument("--sim", action="store_true", help="sim on time steps")
+
     # parser_show
     parser_plot = subparsers.add_parser("plot", help="show the results")
     parser_plot.add_argument("-f", "--file_path", type=Path, help="path to the results file")
@@ -125,7 +130,13 @@ def run_test_driver(cmd_args: TestCmdArgs):
             test_times=cmd_args.random_test_times,
         )
     else:
-        results = test.run_on_test_case(solver_types, cmd_args.test_case, cmd_args.show)
+        results = test.run_on_test_case(
+            solver_types,
+            cmd_args.test_case,
+            cmd_args.show,
+            cmd_args.save_dir,
+            cmd_args.sim,
+        )
 
     comments = [
         f"test_case: {cmd_args.test_case}",
@@ -146,6 +157,7 @@ def run_test_driver(cmd_args: TestCmdArgs):
 
     test.save_results(results, save_path, comments)
     print(f"results saved to {save_path}")
+    print(f"Saving image results to {cmd_args.save_dir}")
 
 
 def run_show_driver(cmd_args: PlotCmdArgs):
@@ -179,6 +191,8 @@ def main():
             hp_values=args.hp_values,
             output_path=args.output,
             show=args.show,
+            save_dir=args.save_dir,
+            sim=args.sim,
         )
         print(cmd_args)
         run_test_driver(cmd_args)

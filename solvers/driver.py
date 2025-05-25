@@ -23,6 +23,29 @@ from . import (
     brute_force_solver,
 )
 
+choices_to_class = {
+    "enum": enum_solver.EnumerationSolver,
+    "brute_force": brute_force_solver.BruteForceSearchSolver,
+    "csci": csci2024.ChinaScience2024_CoalitionFormationGame,
+    "iros": iros2024.IROS2024_CoalitionFormationGame,
+    "iros2": iros2024.IROS2024_CoalitionFormationGame_2,
+    "icra": icra2024.ICRA2024_CoalitionFormationGame,
+    "auction": auction_solver.AuctionBiddingSolverAdvanced,
+    "auction_kimi": auction_solver.AuctionBiddingSolverKimi,
+    "milp": milp_solver.MILPSolver,
+    "milp_pyomo": milp_solver.MILPSolverPyomo,
+    "nlp_scipy": nlp_solver.NLPSolverScipy,
+    "nlp_pyomo": nlp_solver.NLPSolverPyomo,
+    "centralized": centralized_solver.CentralizedSolver,
+    "centralized_random_init": centralized_solver.CentralizedSolver_RandomInit,
+    "centralized_selfish": centralized_solver.CentralizedSolver_Selfish,
+    "centralized_pareto": centralized_solver.CentralizedSolver_Pareto,
+    "distributed": distributed_solver.DistributedSolver,
+    "distributed_random_init": distributed_solver.DistributedSolver_RandomInit,
+    "distributed_selfish": distributed_solver.DistributedSolver_Selfish,
+    "distributed_pareto": distributed_solver.DistributedSolver_Pareto,
+}
+
 
 def get_SolverType(choice: str) -> Type[MRTASolver]:
     if choice == "enum":

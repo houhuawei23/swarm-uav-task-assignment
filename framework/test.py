@@ -55,7 +55,17 @@ def test_solver(
     return coalition_mana, eval_reuslt
 
 
-def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, show: bool = False):
+from pathlib import Path
+
+
+def run_on_test_case(
+    solver_types: List[Type[MRTASolver]],
+    test_case_path: str | Path,
+    show: bool = False,
+    save_dir: Path = None,
+    sim_on_step: bool = False,
+):
+    test_case_path = Path(test_case_path)
     print(f"Running on test case: {test_case_path}")
     results: List[EvalResult] = []
     with open(test_case_path, "r") as f:
@@ -80,7 +90,7 @@ def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, 
         )
         save_result = SaveResult(
             solver_type.type_name(),
-            test_case_path,
+            test_case_path.stem,
             len(uav_manager.get_ids()),
             len(task_manager.get_ids()),
             hyper_params,
@@ -89,12 +99,21 @@ def run_on_test_case(solver_types: List[Type[MRTASolver]], test_case_path: str, 
         )
         results.append(save_result)
         # coalition_mana: CoalitionManager
-        if show:
+        if save_dir is not None:
+            if not save_dir.exists():
+                save_dir.mkdir(parents=True, exist_ok=True)
+            output_path = save_dir / f"{solver_type.type_name()}_{test_case_path.stem}.png"
+        else:
+            output_path = None
+
+        if show or (output_path is not None):
             coalition_mana.plot_map(
-                uav_manager, task_manager, hyper_params, output_path=None, show=True
+                uav_manager, task_manager, hyper_params, output_path=output_path, show=show
             )
-        # env = sim.SimulationEnv(uav_manager, task_manager, coalition_mana, hyper_params)
-        # env.run(10, debug_level=0)
+        if sim_on_step:
+            env = sim.SimulationEnv(uav_manager, task_manager, coalition_mana, hyper_params)
+            env.run(10, debug_level=0)
+
     return results
 
 

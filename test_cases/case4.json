@@ -1,5 +1,7 @@
 {
   "resources_num": 2,
+  "uav_num": 50,
+  "task_num": 5,
   "uavs": [
     {
       "id": 1,

@@ -67,7 +67,7 @@ def run_on_test_case(
 ):
     test_case_path = Path(test_case_path)
     print(f"Running on test case: {test_case_path}")
-    results: List[EvalResult] = []
+    results: List[SaveResult] = []
     with open(test_case_path, "r") as f:
         data = json.load(f)
     hyper_params = HyperParams(
@@ -112,7 +112,7 @@ def run_on_test_case(
             )
         if sim_on_step:
             env = sim.SimulationEnv(uav_manager, task_manager, coalition_mana, hyper_params)
-            env.run(10, debug_level=0)
+            env.run(30, debug_level=0)
 
     return results
 
@@ -284,6 +284,56 @@ def read_results(
 #             plt.savefig(save_dir / f"{label}_{x}.png", dpi=600)  # high dpi
 #         if show:
 #             plt.show()
+plot_info_map = {
+    # solver_name -> info_dict
+    "Centralized": {
+        "color": "red",
+        "marker": "*",
+    },
+    "Distributed": {
+        "color": "blue",
+        "marker": "x",
+    },
+    "CSCI2024_Xue": {
+        "color": "green",
+        "marker": "d",
+        "label": "CSCI2024"
+    },
+    "IROS2024_LiwangZhang": {
+        "color": "brown",
+        "marker": "^",
+        "label": "IROS2024"
+    },
+    "ICRA2024_LiwangZhang": {
+        "color": "orange",
+        "marker": "v",
+        "label": "ICRA2024"
+    },
+    "Centralized_RandomInit": {
+        "color": "purple",
+        "marker": "v",
+    },
+    "Distributed_RandomInit": {
+        "color": "gray",
+        "marker": "+",
+    },
+    "Centralized_Selfish": {
+        "color": "brown",
+        "marker": "v",
+    },
+    "Distributed_Selfish": {
+        "color": "orange",
+        "marker": "^",
+    },
+    "Centralized_Pareto": {
+        "color": "gray",
+        "marker": "*",
+    },
+    "Distributed_Pareto": {
+        "color": "brown",
+        "marker": "+",
+    },
+}
 
 
 def visualize_results(
@@ -307,27 +357,26 @@ def visualize_results(
         else:
             df_filtered = df
 
-        # Set color palette
-        # colors = sns.color_palette("husl", n_colors=len(df_filtered["solver_name"].unique()))
-        # colors = sns.color_palette("pastel")
-        colors = sns.color_palette()
-        # Create box plot
+        # Create custom palette from plot_info_map
+        custom_palette = {solver: info["color"] for solver, info in plot_info_map.items() if solver in df_filtered["solver_name"].unique()}
+        
+        # Create box plot with custom palette
         sns.boxplot(
             x=x,
             y=f"eval_result.{label}",
             hue="solver_name",
             data=df_filtered,
-            palette=colors,
+            palette=custom_palette,
             width=0.7,
             showfliers=False,
             ax=ax,
         )
 
-        # Add line plot connecting medians
+        # Add line plot connecting medians with custom markers
         solvers = df_filtered["solver_name"].unique()
         categories = sorted(df_filtered[x].unique())
 
-        for idx, solver in enumerate(solvers):
+        for solver in solvers:
             solver_medians = []
             for cat in categories:
                 median = df_filtered[
@@ -335,18 +384,17 @@ def visualize_results(
                 ][f"eval_result.{label}"].median()
                 solver_medians.append(median)
 
-            # Plot lines connecting medians
+            # Plot lines connecting medians with custom style
             x_positions = range(len(categories))
             plt.plot(
                 x_positions,
                 solver_medians,
-                "-o",
+                f"-{plot_info_map[solver]['marker']}",
                 linewidth=2.5,
-                markersize=10,
-                color=colors[idx],
-                alpha=0.8,
+                markersize=20,
+                color=plot_info_map[solver]["color"],
+                alpha=0.6,
                 zorder=5,
-                # label=f"{solver} (trend)"
             )
 
         # Enhance the plot appearance
@@ -366,24 +414,40 @@ def visualize_results(
             labelpad=15,
         )
 
-        # Enhance legend
-        handles, labels = ax.get_legend_handles_labels()
+        # Create custom legend with markers and labels
+        legend_elements = []
+        for solver in solvers:
+            if solver in plot_info_map:
+                # Get the label from plot_info_map if it exists, otherwise use solver name
+                display_name = plot_info_map[solver].get("label", solver)
+                marker = plot_info_map[solver]["marker"]
+                color = plot_info_map[solver]["color"]
+                
+                # Create a line with marker for the legend
+                legend_line = plt.Line2D(
+                    [0], [0],
+                    marker=marker,
+                    color=color,
+                    label=display_name,
+                    linestyle='-',
+                    markersize=16,
+                    linewidth=2.5
+                )
+                legend_elements.append(legend_line)
+
+        # Add legend with custom elements
         ax.legend(
-            handles,
-            labels,
+            handles=legend_elements,
             title="Solver Types",
-            title_fontsize=16,
-            fontsize=14,
-            #  bbox_to_anchor=(1.05, 1),
-            # loc="upper left",
+            title_fontsize=20,
+            fontsize=20,
             borderaxespad=0.0,
             frameon=True,
-            #  edgecolor='black'
         )
 
         # Customize grid and style
-        ax.set_facecolor("#f8f9fa")
-        fig.patch.set_facecolor("white")
+        # ax.set_facecolor("#f8f9fa")
+        # fig.patch.set_facecolor("white")
         plt.grid(True, linestyle="--", alpha=0.3)
         plt.tick_params(axis="both", labelsize=16)
 

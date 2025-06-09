@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
-from typing import List
+from typing import List, Dict, Any
 import time
 
 from .base import HyperParams
@@ -38,12 +38,17 @@ class SimulationEnv:
         self.task_manager = task_manager
         self.coalition_manager = coalition_mana
         self.hyper_params = hyper_params
+
         self.time_step = 0
         self.sim_history: List[SimState] = []
+
         self.simulation_dt = 0.1  # Time step for simulation in seconds
         self.total_elapsed_time = 0.0  # Total elapsed simulation time
-        self.task_completion_times = {}  # Track when tasks are completed
-        self.uav_states = {}  # Track UAV states (moving, arrived, etc.)
+
+        # Track when tasks are completed
+        self.task_completion_times: Dict[int, float] = {}
+        # Track UAV states (moving, arrived, etc.), uav_id -> {status, target_task, arrival_time, path}
+        self.uav_states: Dict[int, Dict[str, Any]] = {}
         
         # Initialize UAV states
         for uav in self.uav_manager.get_all():

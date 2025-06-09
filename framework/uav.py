@@ -6,8 +6,17 @@ import numpy as np
 
 from .base import Point, Entity, EntityManager, GenParams
 
+from enum import Enum
 
-@dataclass(init=True, repr=True)
+
+class UAVState(Enum):
+    IDLE = "idle"
+    TASK_ALLOCATING = "task_allocating"
+    FLYING = "flying"
+    TASK_EXECUTING = "task_executing"
+    RETURNING = "returning"
+
+
 class UAV(Entity):
     """Represents an Unmanned Aerial Vehicle (UAV) with its attributes and capabilities.
 
@@ -20,6 +29,8 @@ class UAV(Entity):
         value (float): The intrinsic value or importance of the UAV.
         max_speed (float): The maximum speed at which the UAV can travel.
     """
+
+    state: UAVState = UAVState.IDLE
 
     resources: np.ndarray  # 资源向量
     value: float  # 无人机价值
@@ -48,6 +59,9 @@ class UAV(Entity):
         self.fly_energy_per_time = fly_energy_per_time
         self.hover_energy_per_time = hover_energy_per_time
 
+        self.init_position = position.copy()
+        self.target_task = None
+
     def __post_init__(self):
         super().__post_init__()
 
@@ -73,6 +87,7 @@ class UAV(Entity):
             "mass": self.mass,
             "fly_energy_per_time": self.fly_energy_per_time,
             "hover_energy_per_time": self.hover_energy_per_time,
+            "state": self.state.value,
         }
 
     @classmethod
@@ -116,6 +131,10 @@ class UAV(Entity):
             distance_inc = 0
         return distance_inc
 
+    # def update_state(self, task_id: int):
+
+
+    
 
 @dataclass
 class UAVManager(EntityManager):

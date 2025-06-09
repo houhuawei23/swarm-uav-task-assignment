@@ -74,6 +74,11 @@ python main.py test --test_case hyper_params.alpha --hp_values 0.1 0.2 0.3 --cho
 
 # 运行特定测试用例
 python main.py test --test_case test_case.json --choices algorithm1 algorithm2
+
+python main.py test --test_case ./test_cases/case5.json \
+--choices csci iros icra centralized distributed \
+--save_dir ./.image
+
 ```
 
 目前支持的算法包括：
@@ -273,10 +278,8 @@ CSCI2024_Xue_case4
 <!-- uav_num_all_preference_0519 -->
 
 <p align="center">
-
 <img src="./assets/uav_num_all_preference_0519/completion_rate_uav_num.png" width=45%/>
 <img src="./assets/uav_num_all_preference_0519/elapsed_time_uav_num.png" width=45%/>
-
 </p>
 
 <p align="center">
@@ -432,6 +435,9 @@ python ./main.py plot -f ./.results/results_uav_num_0516.yaml -x uav_num --label
 ## uav num
 python ./main.py test --test_case uav_num --choices csci iros icra centralized distributed --random_test_times 20 --uav_nums 10 20 40 80 160 320 --task_nums 30 -o ./.results/results_uav_num_0518.yaml
 
+python ./main.py plot -f  ./.results/results_uav_num_06.yaml -x uav_num --labels all --choices CSCI2024_Xue IROS2024_LiwangZhang ICRA2024_LiwangZhang Centralized Distributed --show
+# --save_dir ./.results/uav_num_all_06/  
+
 python ./main.py plot -f ./.results/results_uav_num_all_0518.yaml -x uav_num --labels all --choices CSCI2024_Xue IROS2024_LiwangZhang ICRA2024_LiwangZhang Centralized Distributed --save_dir ./.results/uav_num_all_0518/  --show
 
 ## task num
@@ -442,6 +448,10 @@ python ./main.py plot -f ./.results/results_task_num_0518.yaml -x task_num --lab
 ## hyper params
 ### resource contribution weight
 python ./main.py test --test_case hyper_params.resource_contribution_weight --choices all --random_test_times 20 --hp_values -64.0 -10.0 -1.0 0.0 1.0 4.0 8.0 16.0 64.0 -o ./.results/results_hyper_params.resource_contribution_weight_all_0519.yaml
+
+python ./main.py test --test_case hyper_params.resource_contribution_weight --choices all --random_test_times 10 --hp_values -10.0 -1.0 0.0 4.0 8.0 16.0 -o ./.results/results_hyper_params.resource_contribution_weight_all_06.yaml
+
+python ./main.py plot -f ./.results/results_hyper_params.resource_contribution_weight_all_06.yaml -x hyper_params.resource_contribution_weight --labels all  --show 
 
 python ./main.py plot -f ./.results/results_hyper_params.resource_contribution_weight_all_0519.yaml -x hyper_params.resource_contribution_weight --labels all --choices CSCI2024_Xue IROS2024_LiwangZhang ICRA2024_LiwangZhang Centralized Distributed  --show --save_dir ./.results/results_hyper_params.resource_contribution_weight_all_0519
 
@@ -463,6 +473,11 @@ python ./main.py plot -f ./.results/results_hyper_params.resource_waste_weight_a
 ## example [TODO]
 
 ## Ablation Study
+
+python ./main.py test --test_case uav_num --choices centralized distributed centralized_random_init distributed_random_init --random_test_times 10 --uav_nums 10 20 40 80 --task_nums 30 -o ./.results/results_uav_num_ablation_06.yaml
+
+python ./main.py plot -f ./.results/results_uav_num_ablation_06.yaml -x uav_num --labels all --show
+
 ### uav num
 python ./main.py test --test_case uav_num --choices centralized distributed centralized_random_init distributed_random_init --random_test_times 20 --uav_nums 10 20 40 80 160 320 --task_nums 30 -o ./.results/results_uav_num_ablation_0519.yaml
 
@@ -482,6 +497,16 @@ python ./main.py plot -f ./.results/results_uav_num_preference_0519.yaml -x uav_
 ## hyper params
 ### resource contribution weight
 python ./main.py test --test_case uav_num --choices  centralized_selfish centralized_pareto  distributed_selfish distributed_pareto --random_test_times 1 --uav_nums 80  --task_nums 30
+$$
+## exchange
+python ./main.py test --test_case uav_num \
+--choices centralized centralized_exchange \
+--random_test_times 10 \
+--uav_nums 10 20 40 80 120 160 320 --task_nums 100 \
+-o ./.results/results_uav_num_exchange_0526.yaml
+
+python ./main.py plot -f ./.results/results_uav_num_exchange_0526.yaml -x uav_num --labels all --save_dir ./.results/uav_num_all_exchange_0526/ --show
+
 ```
 
 ```py

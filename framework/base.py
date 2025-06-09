@@ -57,6 +57,9 @@ class Point:
     def tolist(self) -> List[float]:
         return self.xyz.tolist()
 
+    def copy(self) -> "Point":
+        return Point(self.xyz.copy())
+
 
 @dataclass
 class Entity:
@@ -182,14 +185,15 @@ class HyperParams:
         max_iter: int = 0 最大迭代次数.
     """
 
+    max_iter: int = 10  # 最大迭代次数
     resources_num: int = 0  # 资源维度数
     # 任务环境区域大小
     map_shape: List[int] = field(default_factory=lambda: [10, 10, 10])
+    
     resource_contribution_weight: float = 10.0  # 资源贡献权重
     path_cost_weight: float = 5.0  # 路径成本权重
     threat_loss_weight: float = 1.0  # 威胁权重
     zero_resource_contribution_penalty: float = -1.0  # ui 加入 tj 无资源贡献时的惩罚 (path_cost)
-    max_iter: int = 10  # 最大迭代次数
     resource_waste_weight: float = 1.0  # 资源浪费权重
 
     def to_dict(self) -> Dict:

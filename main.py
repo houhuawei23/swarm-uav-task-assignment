@@ -36,6 +36,15 @@ class PlotCmdArgs(CmdArgs):
     save_dir: Path
     show: bool
 
+@dataclass
+class DynamicCmdArgs(CmdArgs):
+    test_case: str
+    # choices: List[str]
+    uav_nums: List[int]
+    task_nums: List[int]
+    # hp_values: List
+    # show: bool
+    # save_dir: Path
 
 import framework.test as test
 
@@ -68,7 +77,7 @@ def init_cmd_args():
     parser_test.add_argument("--save_dir", type=Path, default=None, help="path to the output file")
     parser_test.add_argument("--sim", action="store_true", help="sim on time steps")
 
-    # parser_show
+    # parser_plot
     parser_plot = subparsers.add_parser("plot", help="show the results")
     parser_plot.add_argument("-f", "--file_path", type=Path, help="path to the results file")
     parser_plot.add_argument("-x", "--xlabel", type=str, default="uav_num", help="x axis")
@@ -79,6 +88,14 @@ def init_cmd_args():
     parser_plot.add_argument("--save_dir", type=Path, default=None, help="path to the output file")
     parser_plot.add_argument("--show", action="store_true", help="show the plot")
     args = parser.parse_args()
+
+    # parser_dynamic
+    parser_dynamic = subparsers.add_parser("dynamic", help="dynamic simulation")
+    parser_dynamic.add_argument("--test_case", type=str, help="path to the test case file")
+    parser_dynamic.add_argument("--uav_nums", nargs="+", type=int, default=[40], help="uav_num list")
+    parser_dynamic.add_argument("--task_nums", nargs="+", type=int, default=[20], help="number of tasks")
+    # parser_dynamic.add_argument("--hp_values", nargs="+", help="hyper params values")
+    # parser_dynamic.add_argument("--choices", nargs="+", type=str, help="choices of algorithms")
     return args
 
 
@@ -176,6 +193,9 @@ def run_show_driver(cmd_args: PlotCmdArgs):
         show=cmd_args.show,
     )
 
+def run_dynamic_driver(cmd_args: DynamicCmdArgs):
+    pass
+
 
 def main():
     # parse args
@@ -208,6 +228,15 @@ def main():
         )
         print(cmd_args)
         run_show_driver(cmd_args)
+    elif args.command == "dynamic":
+        cmd_args = DynamicCmdArgs(
+            test_case=args.test_case,
+            # choices=args.choices,
+            uav_nums=args.uav_nums,
+            task_nums=args.task_nums,
+        )
+        print(cmd_args)
+        run_dynamic_driver(cmd_args)
     else:
         raise ValueError("Invalid command")
 

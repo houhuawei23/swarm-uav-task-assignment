@@ -125,6 +125,7 @@ def cal_uav_utility_in_colition(
 from . import csci2024
 
 
+
 class IROS2024_CoalitionFormationGame(MRTASolver):
     """
     ```cpp

@@ -37,19 +37,13 @@ class Message:
 @dataclass
 class AutoUAV(UAV):
     """
-    r(tj, Sj^ck) = vj * log(min(wj^ck, |Sj^ck|) + e, wj^ck)
-
-    ui(tj, Sj) = (Sum[ck in C]{ r(tj, Sj^ck) }) / |Sj^ck| - cost(i, j)
-
-    cost(i, j) = distance(i, j)
-    """
-
     # 知道自己的临近无人机的id uav_ids => 知道临近uav的所有信息
     # 知道全局的任务(包括任务信息)
     # uav_manager: UAVManager = field(default=None, init=False)
     # task_manager: TaskManager = field(default=None, init=False)
     # coalition_manager: CoalitionManager = field(default=None, init=False)
     # hyper_params: HyperParams = field(default=None, init=False)
+    """
 
     changed: bool = field(default=False, init=False)
     uav_update_step_dict: Dict[int, int] = field(default=None, init=False)
@@ -97,26 +91,26 @@ class AutoUAV(UAV):
         map_shape: List[float] = utils.calculate_map_shape_on_mana(uav_manager, task_manager)
         max_distance = max(map_shape)
         max_uav_value = max(uav.value for uav in uav_manager.get_all())
-        # self.model_hparams = MRTA_CFG_Model_HyperParams(
-        #     max_distance=max_distance,
-        #     max_uav_value=max_uav_value,
-        #     w_sat=5.0,
-        #     w_waste=1,
-        #     w_dist=1,
-        #     w_threat=1,
-        # )
         self.model_hparams = MRTA_CFG_Model_HyperParams(
             max_distance=max_distance,
             max_uav_value=max_uav_value,
-            # w_sat=10.0,
-            # w_waste=1,
-            # w_dist=1,
-            # w_threat=1,
-            w_sat=hyper_params.resource_contribution_weight,
-            w_waste=hyper_params.resource_waste_weight,
-            w_dist=hyper_params.path_cost_weight,
-            w_threat=hyper_params.threat_loss_weight,
+            w_sat=50.0,
+            w_waste=1,
+            w_dist=2,
+            w_threat=1,
         )
+        # self.model_hparams = MRTA_CFG_Model_HyperParams(
+        #     max_distance=max_distance,
+        #     max_uav_value=max_uav_value,
+        #     # w_sat=10.0,
+        #     # w_waste=1,
+        #     # w_dist=1,
+        #     # w_threat=1,
+        #     w_sat=hyper_params.resource_contribution_weight,
+        #     w_waste=hyper_params.resource_waste_weight,
+        #     w_dist=hyper_params.path_cost_weight,
+        #     w_threat=hyper_params.threat_loss_weight,
+        # )
 
     def send_msg(self) -> Message:
         """
@@ -287,10 +281,10 @@ class DistributedSolver(MRTASolver):
         self.model_hparams = MRTA_CFG_Model_HyperParams(
             max_distance=max_distance,
             max_uav_value=max_uav_value,
-            w_sat=15.0,
-            w_waste=1,
-            w_dist=25,
-            w_threat=1,
+            w_sat=95.0,
+            w_waste=5,
+            w_dist=35,
+            w_threat=10,
         )
 
     @staticmethod

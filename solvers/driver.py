@@ -21,6 +21,8 @@ from . import (
     centralized_solver,
     distributed_solver,
     brute_force_solver,
+    distributed_multi_thread_solver,
+    distributed_multi_process_solver,
 )
 
 choices_to_class = {
@@ -40,56 +42,19 @@ choices_to_class = {
     "centralized_random_init": centralized_solver.CentralizedSolver_RandomInit,
     "centralized_selfish": centralized_solver.CentralizedSolver_Selfish,
     "centralized_pareto": centralized_solver.CentralizedSolver_Pareto,
+    "centralized_exchange": centralized_solver.CentralizedSolver_Exchange,
     "distributed": distributed_solver.DistributedSolver,
     "distributed_random_init": distributed_solver.DistributedSolver_RandomInit,
     "distributed_selfish": distributed_solver.DistributedSolver_Selfish,
     "distributed_pareto": distributed_solver.DistributedSolver_Pareto,
+    "distributed_multi_thread": distributed_multi_thread_solver.DistributedSolver_MultiThreading,
+    "distributed_multi_process": distributed_multi_process_solver.DistributedSolver_MultiProcess,
 }
 
 
 def get_SolverType(choice: str) -> Type[MRTASolver]:
-    if choice == "enum":
-        return enum_solver.EnumerationSolver
-    elif choice == "brute_force":
-        return brute_force_solver.BruteForceSearchSolver
-    elif choice == "csci":
-        return csci2024.ChinaScience2024_CoalitionFormationGame
-    elif choice == "iros":
-        return iros2024.IROS2024_CoalitionFormationGame
-    elif choice == "iros2":
-        return iros2024.IROS2024_CoalitionFormationGame_2
-    elif choice == "icra":
-        return icra2024.ICRA2024_CoalitionFormationGame
-    elif choice == "auction":
-        return auction_solver.AuctionBiddingSolverAdvanced
-    elif choice == "auction_kimi":
-        return auction_solver.AuctionBiddingSolverKimi
-    elif choice == "milp":
-        return milp_solver.MILPSolver
-    elif choice == "milp_pyomo":
-        return milp_solver.MILPSolverPyomo
-    elif choice == "nlp_scipy":
-        return nlp_solver.NLPSolverScipy
-    elif choice == "nlp_pyomo":
-        return nlp_solver.NLPSolverPyomo
-    elif choice == "centralized":
-        return centralized_solver.CentralizedSolver
-    elif choice == "centralized_random_init":
-        return centralized_solver.CentralizedSolver_RandomInit
-    elif choice == "centralized_selfish":
-        return centralized_solver.CentralizedSolver_Selfish
-    elif choice == "centralized_pareto":
-        return centralized_solver.CentralizedSolver_Pareto
-    elif choice == "distributed":
-        return distributed_solver.DistributedSolver
-    elif choice == "distributed_random_init":
-        return distributed_solver.DistributedSolver_RandomInit
-    elif choice == "distributed_selfish":
-        return distributed_solver.DistributedSolver_Selfish
-    elif choice == "distributed_pareto":
-        return distributed_solver.DistributedSolver_Pareto
-    else:
-        raise ValueError("Invalid choice")
+    return choices_to_class[choice]
+
 
 
 choices_short2long = {

@@ -742,10 +742,13 @@ class MRTA_CFG_Model:
         # Get tasks for both UAVs
         task_i_id = coalition_manager.get_taskid(uavi.id)
         task_j_id = coalition_manager.get_taskid(uavj.id)
-        
+
         if task_i_id is None or task_j_id is None:
             raise Exception("One or both UAVs are not assigned to any task")
-            
+
+        if task_i_id == task_j_id:
+            return False
+
         task_i = task_manager.get(task_i_id)
         task_j = task_manager.get(task_j_id)
 

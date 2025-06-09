@@ -20,6 +20,7 @@ from .utils import MRTA_CFG_Model, MRTA_CFG_Model_HyperParams
 log_level: LogLevel = LogLevel.SILENCE
 
 
+
 class CentralizedSolver(MRTASolver):
     def __init__(
         self,
@@ -32,6 +33,18 @@ class CentralizedSolver(MRTASolver):
         map_shape: List[float] = utils.calculate_map_shape_on_mana(uav_manager, task_manager)
         max_distance = max(map_shape)
         max_uav_value = max(uav.value for uav in uav_manager.get_all())
+        self.model_hparams = MRTA_CFG_Model_HyperParams(
+            max_distance=max_distance,
+            max_uav_value=max_uav_value,
+            w_sat=150.0,
+            w_waste=1,
+            w_dist=15,
+            w_threat=1,
+            # w_sat=70.0,
+            # w_waste=1,
+            # w_dist=12,
+            # w_threat=1,
+        )
         # self.model_hparams = MRTA_CFG_Model_HyperParams(
         #     max_distance=max_distance,
         #     max_uav_value=max_uav_value,
@@ -39,23 +52,11 @@ class CentralizedSolver(MRTASolver):
         #     # w_waste=1,
         #     # w_dist=1,
         #     # w_threat=1,
-        #     w_sat=70.0,
-        #     w_waste=1,
-        #     w_dist=12,
-        #     w_threat=1,
+        #     w_sat=hyper_params.resource_contribution_weight,
+        #     w_waste=hyper_params.resource_waste_weight,
+        #     w_dist=hyper_params.path_cost_weight,
+        #     w_threat=hyper_params.threat_loss_weight,
         # )
-        self.model_hparams = MRTA_CFG_Model_HyperParams(
-            max_distance=max_distance,
-            max_uav_value=max_uav_value,
-            # w_sat=10.0,
-            # w_waste=1,
-            # w_dist=1,
-            # w_threat=1,
-            w_sat=hyper_params.resource_contribution_weight,
-            w_waste=hyper_params.resource_waste_weight,
-            w_dist=hyper_params.path_cost_weight,
-            w_threat=hyper_params.threat_loss_weight,
-        )
 
     @classmethod
     def type_name(cls):
@@ -141,15 +142,11 @@ class CentralizedSolver(MRTASolver):
 
         return True
 
-    def allocate_once(self, uav_list: List[UAV], prefer: str = "cooperative"):
-        """
-        Complexity: O(uav_list.size() x m x n)
-        """
-        # print(f"allocate_once {len(uav_list)}")
-        changed = False
+    def try_divert(self, uav_list: List[UAV], prefer: str = "cooperative"):
         # random sample allocate
         task_ids = self.task_manager.get_ids().copy()
 
+        changed = False
         # traverse: try to divert
         for uav in uav_list:
             # print(f"uav {uav.id}")
@@ -177,66 +174,146 @@ class CentralizedSolver(MRTASolver):
                     self.coalition_manager.unassign(uav.id)
                     self.coalition_manager.assign(uav.id, taskj_id)
                     changed = True
-                    break  # if uav changed task, break, next uav
+                    # break  # if uav changed task, break, next uav
+        return changed
+
+    def try_exchange(self, uav_list: List[UAV], prefer: str = "cooperative"):
+        changed = False
 
         # traverse: try to exchange, between uavi and uavj
         # TODO:
-
+        for uavi_idx in range(len(uav_list)):
+            for uavj_idx in range(uavi_idx + 1, len(uav_list)):
+                uavi = uav_list[uavi_idx]
+                uavj = uav_list[uavj_idx]
+                if uavi.id == uavj.id:
+                    continue
+                taski_id = self.coalition_manager.get_taskid(uavi.id)
+                taskj_id = self.coalition_manager.get_taskid(uavj.id)
+                if taski_id == taskj_id:
+                    continue
+                # taski = self.task_manager.get(taski_id)
+                # taskj = self.task_manager.get(taskj_id)
+                if MRTA_CFG_Model.cooperative_exchange_prefer(
+                    uavi,
+                    uavj,
+                    self.uav_manager,
+                    self.task_manager,
+                    self.coalition_manager,
+                    self.hyper_params.resources_num,
+                    self.model_hparams,
+                ):
+                    self.coalition_manager.unassign(uavi.id)
+                    self.coalition_manager.assign(uavi.id, taskj_id)
+                    self.coalition_manager.unassign(uavj.id)
+                    self.coalition_manager.assign(uavj.id, taski_id)
+                    changed = True
+                    # break  # if uav changed task, break, next uav
         return changed
 
-    def run_allocate(self):
-        self._run_allocate(init_method="beta", prefer="cooperative")
+    def allocate_once(
+        self, uav_list: List[UAV], prefer: str = "cooperative", try_exchange: bool = False
+    ):
+        """
+        Complexity: O(uav_list.size() x m x n)
+        """
+        # print(f"allocate_once {len(uav_list)}")
+        changed = False
+        changed |= self.try_divert(uav_list, prefer)
+        if try_exchange:
+            changed |= self.try_exchange(uav_list, prefer)
+        return changed
 
-    def _run_allocate(self, init_method: str = "beta", prefer: str = "cooperative"):
-        # 使用新的初始化方法
+    def run_allocate(self, init_method: str = "beta"):
+        self._run_allocate(init_method=init_method, prefer="cooperative", try_exchange=False)
+
+    def _run_allocate(
+        self,
+        init_method: str = "beta",
+        prefer: str = "cooperative",
+        try_exchange: bool = False,
+    ):
+        """Run the allocation algorithm with specified initialization method and preferences.
+
+        Args:
+            init_method: Method to use for initial allocation ("beta", "random", or "none")
+            prefer: Preference strategy for allocation ("cooperative", "selfish", or "pareto")
+            try_exchange: Whether to attempt UAV exchanges during allocation
+        """
+        # Initialize allocation based on specified method
         if init_method == "beta":
             self.init_allocate_beta()
         elif init_method == "random":
             self.init_allocate()
+        elif init_method == "none":
+            pass
+        else:
+            raise ValueError(f"Invalid init method: {init_method}")
 
-        # 后续优化过程保持不变
-        max_not_cahnged_iter = 5
+        # Setup iteration parameters
+        max_not_changed_iter = 5
         not_changed_iter_cnt = 0
-
         iter = 0
         sample_rate = 1 / 3
         rec_sample_size = int(max(1, self.uav_manager.size() * sample_rate))
         rec_max_not_changed_iter = int(1 / sample_rate) + 10
 
         uav_list = self.uav_manager.get_all()
-        # Complexity: max_iter x O(n x m x n)
-        while True:  # max_iter or 1/sample_rate
-            if log_level >= LogLevel.INFO:
-                print(f"not_changed_iter_cnt {not_changed_iter_cnt}")
 
-            if not_changed_iter_cnt > max_not_cahnged_iter:
-                if log_level >= LogLevel.INFO:
-                    print(f"reach max_not_cahnged_iter {max_not_cahnged_iter}")
+        def log_iteration_status():
+            """Helper function to log iteration status"""
+            if log_level >= LogLevel.INFO:
+                print(f"Iteration {iter}: {not_changed_iter_cnt} unchanged iterations")
+
+        def log_termination_reason(reason: str):
+            """Helper function to log termination reason"""
+            if log_level >= LogLevel.INFO:
+                print(f"Terminating: {reason}")
+
+        # Main allocation loop
+        while True:
+            log_iteration_status()
+
+            # Check termination conditions
+            if not_changed_iter_cnt > max_not_changed_iter:
+                log_termination_reason(f"Reached max unchanged iterations ({max_not_changed_iter})")
                 break
             if not_changed_iter_cnt > rec_max_not_changed_iter:
-                if log_level >= LogLevel.INFO:
-                    print(f"reach rec_max_not_changed_iter {rec_max_not_changed_iter}")
+                log_termination_reason(
+                    f"Reached recommended max unchanged iterations ({rec_max_not_changed_iter})"
+                )
                 break
             if iter > self.hyper_params.max_iter:
-                if log_level >= LogLevel.INFO:
-                    print(f"reach max iter {self.hyper_params.max_iter}")
+                log_termination_reason(f"Reached max iterations ({self.hyper_params.max_iter})")
                 break
+
+            # Sample UAVs and attempt allocation
             sampled_uavs = random.sample(uav_list, rec_sample_size)
-            # 以历史更新的次数为权重，从 uav_list 中取样
-            changed = self.allocate_once(sampled_uavs, prefer=prefer)  # sample_size x m x n
-            # changed = self.allocate_once(self.uav_manager.get_all(), debug=debug)
+            changed = self.allocate_once(sampled_uavs, prefer=prefer, try_exchange=try_exchange)
+
+            # Update iteration counters
             if not changed:
                 not_changed_iter_cnt += 1
                 if log_level >= LogLevel.INFO:
-                    print("unchanged")
+                    print("No changes in this iteration")
             else:
                 not_changed_iter_cnt = 0
                 if log_level >= LogLevel.INFO:
-                    print("changed")
+                    print("Changes detected in this iteration")
+
             iter += 1
 
         # print
         # self.coalition_manager.format_print()
+
+
+class CentralizedSolver_Exchange(CentralizedSolver):
+    @classmethod
+    def type_name(cls):
+        return "Centralized_Exchange"
+
+    def run_allocate(self):
+        self._run_allocate(init_method="beta", prefer="cooperative", try_exchange=True)
 
 
 class CentralizedSolver_Selfish(CentralizedSolver):

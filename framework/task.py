@@ -10,8 +10,17 @@ from .base import Point, Entity, EntityManager, GenParams
 
 default_execution_time = 2
 
+from enum import Enum
 
-@dataclass(init=True, repr=True)
+
+
+class TaskState(Enum):
+    UNASSIGNED = "unassigned"
+    ASSIGNED = "assigned"
+    EXECUTING = "executing"
+    COMPLETED = "completed"
+
+# @dataclass(init=True, repr=True)
 class Task(Entity):
     """Represents a task that requires the cooperation of UAVs to be completed.
 
@@ -24,6 +33,7 @@ class Task(Entity):
         time_window (list): A time window [min_start, max_start] during which the task can be started.
         threat (float): A threat index representing the danger or risk associated with the task.
     """
+    state: TaskState = TaskState.UNASSIGNED
 
     required_resources: np.ndarray  # 资源需求向量
     time_window: List  # 时间窗口 [min_start, max_start]
@@ -68,6 +78,7 @@ class Task(Entity):
             "time_window": self.time_window,
             "threat": self.threat,
             "execution_time": self.execution_time,
+            "state": self.state.value,
         }
 
     @classmethod

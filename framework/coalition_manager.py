@@ -14,11 +14,17 @@ from matplotlib.patches import Circle, Polygon, Wedge, FancyArrowPatch
 from matplotlib.path import Path
 import matplotlib.patches as patches
 import matplotlib.colors as mcolors
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+import os
 
 from .base import plot_entities_on_axes, HyperParams
 from .uav import UAV, UAVManager
 from .task import Task, TaskManager
 from .utils import evaluate_assignment
+
+from pathlib import Path
+
+ICONS_DIR = Path(__file__).parent / "icons"
 
 
 class CoalitionManager:
@@ -41,6 +47,8 @@ class CoalitionManager:
         self.task2coalition[self.free_uav_task_id] = copy.deepcopy(uav_ids)
         # uav -> task is None
         self.uavid2taskid = {uav_id: self.free_uav_task_id for uav_id in uav_ids}
+
+        self.text_delta = 3
 
     def random_init(self):
         for uav_id in self.uav_ids:
@@ -221,6 +229,15 @@ class CoalitionManager:
             )
             ax.add_patch(outer_circle)
 
+        # Load UAV image
+        plane_img = plt.imread(ICONS_DIR / "plane-blue.png")
+        plane_img = np.array(plane_img)
+        # Convert to RGBA if not already
+        if plane_img.shape[2] == 3:
+            plane_img = np.dstack((plane_img, np.ones(plane_img.shape[:2]) * 255))
+        # Tint the image with coalition color
+        plane_img[:, :, :3] = plane_img[:, :, :3] * coalition_color[:3]
+
         # Plot UAVs with enhanced styling
         uav_list = [uav_manager.get(uav_id) for uav_id in coalition]
         for uav in uav_list:
@@ -230,23 +247,27 @@ class CoalitionManager:
             glow = plt.Circle((x, y), 0.7, color=coalition_color, alpha=0.2, zorder=2)
             ax.add_patch(glow)
 
-            # Plot the UAV with a more professional style
-            ax.scatter(
-                x,
-                y,
-                color=coalition_color,
-                marker="o",
-                s=80,
-                edgecolor="white",
-                linewidth=1.5,
-                zorder=3,
-            )
+            # Calculate rotation angle to point towards task
+            dx = task.position.x - x
+            dy = task.position.y - y
+            angle = (
+                np.degrees(np.arctan2(dy, dx)) - 90
+            )  # -90 because plane points upward by default
 
-            # Add UAV label with improved styling
-            text_delta = 0.3
+            # Rotate the plane image
+            from scipy.ndimage import rotate
+
+            rotated_plane = rotate(plane_img, angle, reshape=True)
+
+            # Plot the UAV with custom image
+            imagebox = OffsetImage(rotated_plane, zoom=0.3)
+            ab = AnnotationBbox(imagebox, (x, y), frameon=False, zorder=3)
+            ax.add_artist(ab)
+
+            # Add UAV label with improved styling and increased spacing
             ax.text(
                 x,
-                y + text_delta,
+                y + self.text_delta,
                 s=uav.brief_info(),
                 ha="center",
                 color=coalition_color,
@@ -347,11 +368,18 @@ class CoalitionManager:
         fig, ax = plt.subplots(figsize=(16, 12), dpi=120)
 
         # Set background and style
-        ax.set_facecolor("#f8f9fa")
-        fig.patch.set_facecolor("white")
+        # ax.set_facecolor("#f8f9fa")
+        # fig.patch.set_facecolor("white")
 
         # Add subtle grid for better readability
         ax.grid(True, linestyle="--", alpha=0.3, color="gray")
+
+        # Load task image
+        task_img = plt.imread(ICONS_DIR / "task.png")
+        task_img = np.array(task_img)
+        # Convert to RGBA if not already
+        if task_img.shape[2] == 3:
+            task_img = np.dstack((task_img, np.ones(task_img.shape[:2]) * 255))
 
         # Plot tasks with improved styling
         task_list = [
@@ -365,16 +393,15 @@ class CoalitionManager:
             task_glow = plt.Circle((x, y), 1.2, color="red", alpha=0.15, zorder=1)
             ax.add_patch(task_glow)
 
-            # Plot task with professional styling
-            ax.scatter(
-                x, y, color="red", marker="s", s=120, edgecolor="white", linewidth=1.5, zorder=2
-            )
+            # Plot task with custom image
+            imagebox = OffsetImage(task_img, zoom=0.1)
+            ab = AnnotationBbox(imagebox, (x, y), frameon=False, zorder=2)
+            ax.add_artist(ab)
 
-            # Add task label with improved styling
-            text_delta = 0.4
+            # Add task label with improved styling and increased spacing
             ax.text(
                 x,
-                y + text_delta,
+                y + self.text_delta,
                 s=task.brief_info(),
                 ha="center",
                 color="darkred",
@@ -392,6 +419,16 @@ class CoalitionManager:
             self.plot_coalition(ax, task_id, coalition, uav_manager, task_manager, coalition_idx)
             coalition_idx += 1
 
+        # Load UAV image for unassigned UAVs
+        plane_img = plt.imread(ICONS_DIR / "plane-white.png")
+        plane_img = np.array(plane_img)
+        # Convert to RGBA if not already
+        if plane_img.shape[2] == 3:
+            plane_img = np.dstack((plane_img, np.ones(plane_img.shape[:2]) * 255))
+        # Tint the image with gray color
+        gray_color = np.array([0.5, 0.5, 0.5, 1.0])
+        plane_img[:, :, :3] = plane_img[:, :, :3] * gray_color[:3]
+
         # Plot unassigned UAVs with improved styling
         if plot_unassigned:
             unassigned_uav_ids = self.get_unassigned_uav_ids()
@@ -404,24 +441,15 @@ class CoalitionManager:
                 glow = plt.Circle((x, y), 0.7, color="gray", alpha=0.15, zorder=1)
                 ax.add_patch(glow)
 
-                # Plot the UAV with a more professional style
-                ax.scatter(
-                    x,
-                    y,
-                    color="gray",
-                    marker="o",
-                    s=80,
-                    edgecolor="white",
-                    linewidth=1.5,
-                    alpha=0.7,
-                    zorder=2,
-                )
+                # Plot the UAV with custom image
+                imagebox = OffsetImage(plane_img, zoom=0.25)
+                ab = AnnotationBbox(imagebox, (x, y), frameon=False, zorder=2)
+                ax.add_artist(ab)
 
-                # Add UAV label with improved styling
-                text_delta = 0.3
+                # Add UAV label with improved styling and increased spacing
                 ax.text(
                     x,
-                    y + text_delta,
+                    y + self.text_delta,
                     s=uav.brief_info(),
                     ha="center",
                     color="dimgray",
@@ -453,6 +481,9 @@ class CoalitionManager:
         stats_text = (
             f"Task Completion Rate: {eval_result.completion_rate:.2f}\n"
             f"Resource Utilization: {eval_result.resource_use_rate:.2f}\n"
+            f"Total Distance: {eval_result.total_distance:.2f}\n"
+            f"Total Energy: {eval_result.total_energy:.2f}\n"
+            f"Total Exploss: {eval_result.total_exploss:.2f}\n"
             f"Total UAVs: {len(uav_manager)}\n"
             f"Total Tasks: {len(task_manager) - 1}"  # Subtract free UAV task
         )
@@ -485,8 +516,8 @@ class CoalitionManager:
             y_min, y_max = min(y_coords), max(y_coords)
 
             # Add padding (10% of range)
-            x_padding = 0.1 * (x_max - x_min)
-            y_padding = 0.1 * (y_max - y_min)
+            x_padding = 0.2 * (x_max - x_min)
+            y_padding = 0.2 * (y_max - y_min)
 
             ax.set_xlim(x_min - x_padding, x_max + x_padding)
             ax.set_ylim(y_min - y_padding, y_max + y_padding)
